@@ -3,18 +3,486 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Nom de votre projet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookingSystem - Système de réservation</title>
     <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
 </head>
 
 <body>
-    <header>
-        <h1>Notre Projet</h1>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>📅 BookingSystem - Système de réservation</h1>
+                    <p class="tagline">Gestion intelligente de vos réservations</p>
+                </div>
+                <nav class="main-nav">
+                    <ul>
+                        <li><a href="#dashboard" class="nav-link active" data-view="dashboard">Dashboard</a></li>
+                        <li><a href="#reservations" class="nav-link" data-view="reservations">Réservations</a></li>
+                        <li><a href="#resources" class="nav-link" data-view="resources">Ressources</a></li>
+                        <li><a href="#calendar" class="nav-link" data-view="calendar">Calendrier</a></li>
+                        <li><a href="#admin" class="nav-link" data-view="admin">Administration</a></li>
+                    </ul>
+                </nav>
+                <div class="user-menu">
+                    <div class="notifications">
+                        <button class="btn-icon" id="notificationBtn">
+                            🔔 <span class="badge">3</span>
+                        </button>
+                    </div>
+                    <div class="user-profile">
+                        <img src="https://via.placeholder.com/40" alt="User" class="avatar">
+                        <span class="user-name">Admin</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </header>
-    <main id="app"></main>
-    <footer> 
-   <p>&copy; 2025 - TP1-INF1763</p> 
-    </footer> 
+
+    <!-- Main Content -->
+    <main id="app" class="main-content">
+        <div class="container">
+            
+            <!-- Dashboard View -->
+            <section id="dashboard-view" class="view active">
+                <h2 class="section-title">Tableau de Bord</h2>
+                
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3>Réservations du jour</h3>
+                            <p class="stat-value" id="todayBookings">0</p>
+                            <span class="stat-change positive">+12% cette semaine</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏢</div>
+                        <div class="stat-info">
+                            <h3>Ressources disponibles</h3>
+                            <p class="stat-value" id="availableResources">0</p>
+                            <span class="stat-change">Taux d'occupation: 75%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-info">
+                            <h3>En attente d'approbation</h3>
+                            <p class="stat-value" id="pendingApprovals">0</p>
+                            <span class="stat-change warning">Action requise</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <h3>Revenus du mois</h3>
+                            <p class="stat-value">$<span id="monthlyRevenue">0</span></p>
+                            <span class="stat-change positive">+8% vs mois dernier</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="dashboard-section">
+                    <h3>Activité Récente</h3>
+                    <div id="recentActivity" class="activity-list"></div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h3>Actions Rapides</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="newBookingBtn">➕ Nouvelle Réservation</button>
+                        <button class="btn btn-secondary" id="viewCalendarBtn">📅 Voir Calendrier</button>
+                        <button class="btn btn-secondary" id="manageResourcesBtn">🏢 Gérer Ressources</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reservations View -->
+            <section id="reservations-view" class="view">
+                <div class="view-header">
+                    <h2 class="section-title">Gestion des Réservations</h2>
+                    <button class="btn btn-primary" id="createBookingBtn">➕ Nouvelle Réservation</button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-bar">
+                    <div class="filter-group">
+                        <label>Statut:</label>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">Tous</option>
+                            <option value="pending">En attente</option>
+                            <option value="approved">Approuvé</option>
+                            <option value="rejected">Rejeté</option>
+                            <option value="cancelled">Annulé</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Période:</label>
+                        <select id="periodFilter" class="filter-select">
+                            <option value="today">Aujourd'hui</option>
+                            <option value="week">Cette semaine</option>
+                            <option value="month">Ce mois</option>
+                            <option value="all">Toutes</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Ressource:</label>
+                        <select id="resourceFilter" class="filter-select">
+                            <option value="all">Toutes les ressources</option>
+                        </select>
+                    </div>
+                    <input type="search" id="searchBookings" placeholder="🔍 Rechercher..." class="search-input">
+                </div>
+
+                <!-- Bookings Table -->
+                <div class="table-container">
+                    <table id="bookingsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Ressource</th>
+                                <th>Utilisateur</th>
+                                <th>Date & Heure</th>
+                                <th>Durée</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingsTableBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Booking Form Modal -->
+                <div id="bookingModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="bookingModalTitle">Nouvelle Réservation</h3>
+                            <button class="close-btn" id="closeBookingModal">&times;</button>
+                        </div>
+                        <form id="bookingForm" class="booking-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="bookingResource">Ressource *</label>
+                                    <select id="bookingResource" required class="form-control"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="bookingUser">Utilisateur *</label>
+                                    <input type="text" id="bookingUser" required class="form-control" placeholder="Nom de l'utilisateur">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="bookingDate">Date *</label>
+                                    <input type="date" id="bookingDate" required class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="bookingStartTime">Heure de début *</label>
+                                    <input type="time" id="bookingStartTime" required class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="bookingEndTime">Heure de fin *</label>
+                                    <input type="time" id="bookingEndTime" required class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bookingRecurring">
+                                    <input type="checkbox" id="bookingRecurring">
+                                    Réservation récurrente
+                                </label>
+                            </div>
+                            <div id="recurringOptions" class="recurring-options" style="display: none;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="recurringFrequency">Fréquence</label>
+                                        <select id="recurringFrequency" class="form-control">
+                                            <option value="daily">Quotidien</option>
+                                            <option value="weekly">Hebdomadaire</option>
+                                            <option value="monthly">Mensuel</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="recurringUntil">Jusqu'au</label>
+                                        <input type="date" id="recurringUntil" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bookingNotes">Notes</label>
+                                <textarea id="bookingNotes" class="form-control" rows="3" placeholder="Informations supplémentaires..."></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelBookingBtn">Annuler</button>
+                                <button type="submit" class="btn btn-primary">Créer la réservation</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Resources View -->
+            <section id="resources-view" class="view">
+                <div class="view-header">
+                    <h2 class="section-title">Catalogue des Ressources</h2>
+                    <button class="btn btn-primary" id="addResourceBtn">➕ Ajouter une ressource</button>
+                </div>
+
+                <!-- Resource Filters -->
+                <div class="filters-bar">
+                    <div class="filter-group">
+                        <label>Catégorie:</label>
+                        <select id="categoryFilter" class="filter-select">
+                            <option value="all">Toutes</option>
+                            <option value="salle">Salles</option>
+                            <option value="equipement">Équipements</option>
+                            <option value="vehicule">Véhicules</option>
+                            <option value="service">Services</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Disponibilité:</label>
+                        <select id="availabilityFilter" class="filter-select">
+                            <option value="all">Toutes</option>
+                            <option value="available">Disponibles</option>
+                            <option value="busy">Occupées</option>
+                            <option value="maintenance">En maintenance</option>
+                        </select>
+                    </div>
+                    <input type="search" id="searchResources" placeholder="🔍 Rechercher une ressource..." class="search-input">
+                </div>
+
+                <!-- Resources Grid -->
+                <div id="resourcesGrid" class="resources-grid"></div>
+
+                <!-- Resource Form Modal -->
+                <div id="resourceModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Ajouter une ressource</h3>
+                            <button class="close-btn" id="closeResourceModal">&times;</button>
+                        </div>
+                        <form id="resourceForm" class="resource-form">
+                            <div class="form-group">
+                                <label for="resourceName">Nom de la ressource *</label>
+                                <input type="text" id="resourceName" required class="form-control" placeholder="Ex: Salle de conférence A">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="resourceCategory">Catégorie *</label>
+                                    <select id="resourceCategory" required class="form-control">
+                                        <option value="">Sélectionner...</option>
+                                        <option value="salle">Salle</option>
+                                        <option value="equipement">Équipement</option>
+                                        <option value="vehicule">Véhicule</option>
+                                        <option value="service">Service</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="resourceCapacity">Capacité</label>
+                                    <input type="number" id="resourceCapacity" class="form-control" placeholder="Ex: 20 personnes">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="resourceDescription">Description</label>
+                                <textarea id="resourceDescription" class="form-control" rows="3" placeholder="Description de la ressource..."></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="resourcePricing">Type de tarification</label>
+                                    <select id="resourcePricing" class="form-control">
+                                        <option value="gratuit">Gratuit</option>
+                                        <option value="horaire">Tarif horaire</option>
+                                        <option value="forfait">Forfait</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="resourcePrice">Prix ($)</label>
+                                    <input type="number" id="resourcePrice" class="form-control" placeholder="0.00" step="0.01">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="resourceEquipments">Équipements disponibles</label>
+                                <input type="text" id="resourceEquipments" class="form-control" placeholder="Ex: Projecteur, Tableau blanc, WiFi">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelResourceBtn">Annuler</button>
+                                <button type="submit" class="btn btn-primary">Ajouter</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Calendar View -->
+            <section id="calendar-view" class="view">
+                <div class="view-header">
+                    <h2 class="section-title">Calendrier des Réservations</h2>
+                    <div class="calendar-controls">
+                        <button class="btn btn-secondary" id="prevMonth">◀</button>
+                        <h3 id="currentMonth">Novembre 2025</h3>
+                        <button class="btn btn-secondary" id="nextMonth">▶</button>
+                        <button class="btn btn-primary" id="todayBtn">Aujourd'hui</button>
+                    </div>
+                </div>
+
+                <!-- Calendar View Options -->
+                <div class="view-options">
+                    <button class="view-btn active" data-view-type="month">Mois</button>
+                    <button class="view-btn" data-view-type="week">Semaine</button>
+                    <button class="view-btn" data-view-type="day">Jour</button>
+                </div>
+
+                <!-- Calendar Container -->
+                <div id="calendar" class="calendar-container"></div>
+
+                <!-- Legend -->
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <span class="legend-color status-approved"></span>
+                        <span>Approuvé</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color status-pending"></span>
+                        <span>En attente</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color status-rejected"></span>
+                        <span>Rejeté</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color status-maintenance"></span>
+                        <span>Maintenance</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin View -->
+            <section id="admin-view" class="view">
+                <h2 class="section-title">Administration</h2>
+                
+                <div class="admin-tabs">
+                    <button class="tab-btn active" data-tab="users">Utilisateurs</button>
+                    <button class="tab-btn" data-tab="approvals">Approbations</button>
+                    <button class="tab-btn" data-tab="reports">Rapports</button>
+                    <button class="tab-btn" data-tab="settings">Paramètres</button>
+                </div>
+
+                <!-- Users Tab -->
+                <div id="users-tab" class="tab-content active">
+                    <div class="view-header">
+                        <h3>Gestion des Utilisateurs</h3>
+                        <button class="btn btn-primary" id="addUserBtn">➕ Nouvel utilisateur</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Email</th>
+                                    <th>Groupe</th>
+                                    <th>Quotas</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Approvals Tab -->
+                <div id="approvals-tab" class="tab-content">
+                    <h3>Réservations en attente d'approbation</h3>
+                    <div id="approvalsList" class="approvals-list"></div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div id="reports-tab" class="tab-content">
+                    <h3>Rapports et Statistiques</h3>
+                    <div class="reports-grid">
+                        <div class="report-card">
+                            <h4>Fréquentation</h4>
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                        <div class="report-card">
+                            <h4>Revenus mensuels</h4>
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                        <div class="report-card">
+                            <h4>Taux d'utilisation par ressource</h4>
+                            <div id="utilizationStats"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="exportReportBtn">📊 Exporter le rapport</button>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings-tab" class="tab-content">
+                    <h3>Configuration du Système</h3>
+                    <form id="settingsForm" class="settings-form">
+                        <div class="settings-section">
+                            <h4>Règles de réservation</h4>
+                            <div class="form-group">
+                                <label for="maxBookingDuration">Durée maximale d'une réservation (heures)</label>
+                                <input type="number" id="maxBookingDuration" class="form-control" value="8">
+                            </div>
+                            <div class="form-group">
+                                <label for="advanceBookingDays">Délai maximum de réservation (jours)</label>
+                                <input type="number" id="advanceBookingDays" class="form-control" value="30">
+                            </div>
+                            <div class="form-group">
+                                <label for="cancellationPolicy">Politique d'annulation (heures avant)</label>
+                                <input type="number" id="cancellationPolicy" class="form-control" value="24">
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <h4>Notifications</h4>
+                            <label>
+                                <input type="checkbox" id="emailNotifications" checked>
+                                Activer les notifications par email
+                            </label>
+                            <label>
+                                <input type="checkbox" id="smsNotifications">
+                                Activer les notifications SMS
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer les paramètres</button>
+                    </form>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>BookingSystem</h4>
+                    <p>Plateforme de gestion de réservations professionnelle</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <p>Email: support@bookingsystem.com</p>
+                    <p>Tél: +1 (555) 123-4567</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Équipe Projet_De_Session</h4>
+                    <p>Baltha Jonel Bula Bula, Bajoudjoum abidé, Dushime Anne Ciella, Bubala Aristote, Coly Claude Raphael</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 BookingSystem - Projet_De_Session | Tous droits réservés</p>
+            </div>
+        </div>
+    </footer>
+
     <script src="../js/script.js"></script>
 </body>
 
