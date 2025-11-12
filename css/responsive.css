@@ -1,0 +1,317 @@
+/* ===================================
+   BookingSystem - Responsive Styles
+   ================================== */
+
+/* Tablet Styles (max-width: 1024px) */
+@media (max-width: 1024px) {
+    .header-content {
+        flex-wrap: wrap;
+    }
+
+    .main-nav ul {
+        flex-wrap: wrap;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .resources-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-controls {
+        flex-wrap: wrap;
+    }
+}
+
+/* Mobile Styles (max-width: 768px) */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+
+    /* Header */
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .logo {
+        text-align: center;
+    }
+
+    .logo h1 {
+        font-size: 1.5rem;
+    }
+
+    .main-nav ul {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .nav-link {
+        text-align: center;
+        padding: 0.75rem;
+    }
+
+    .user-menu {
+        justify-content: center;
+    }
+
+    /* Statistics */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-icon {
+        margin: 0 auto;
+    }
+
+    /* View Header */
+    .view-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .view-header h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Filters */
+    .filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .search-input {
+        width: 100%;
+        min-width: auto;
+    }
+
+    /* Tables */
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        font-size: 0.875rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
+    }
+
+    /* Forms */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+    }
+
+    /* Modal */
+    .modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+
+    /* Resources */
+    .resources-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .resource-actions {
+        flex-direction: column;
+    }
+
+    /* Calendar */
+    .calendar-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .calendar-controls h3 {
+        text-align: center;
+    }
+
+    .view-options {
+        justify-content: center;
+    }
+
+    .calendar-grid {
+        font-size: 0.875rem;
+    }
+
+    .calendar-day {
+        min-height: 80px;
+        padding: 0.5rem;
+    }
+
+    .calendar-legend {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    /* Admin Tabs */
+    .admin-tabs {
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        flex: 1;
+        min-width: 120px;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    /* Reports */
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Footer */
+    .footer-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* Small Mobile (max-width: 480px) */
+@media (max-width: 480px) {
+    .logo h1 {
+        font-size: 1.25rem;
+    }
+
+    .tagline {
+        font-size: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.625rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .calendar-day-header {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .calendar-day {
+        min-height: 60px;
+        padding: 0.25rem;
+    }
+
+    .day-number {
+        font-size: 0.875rem;
+    }
+
+    .calendar-event {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.3rem;
+    }
+
+    .modal-content {
+        max-height: 95vh;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+    }
+}
+
+/* Landscape Mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+    .main-header {
+        position: relative;
+    }
+
+    .modal-content {
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .calendar-day {
+        min-height: 60px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .main-header,
+    .main-nav,
+    .user-menu,
+    .filters-bar,
+    .quick-actions,
+    .btn,
+    .main-footer {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+    }
+
+    .main-content {
+        padding: 0;
+    }
+
+    .view {
+        display: block !important;
+    }
+
+    .stat-card,
+    .resource-card,
+    .approval-card,
+    .report-card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        break-inside: avoid;
+    }
+
+    .data-table {
+        border: 1px solid #ccc;
+    }
+
+    .data-table th,
+    .data-table td {
+        border: 1px solid #ccc;
+    }
+}
