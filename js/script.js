@@ -17,7 +17,9 @@ let resources = [
         price: 75.00,
         equipments: 'Projecteur, Tableau blanc, WiFi, Système audio',
         status: 'available',
-        image: 'https://via.placeholder.com/300x200/2563eb/ffffff?text=Salle+A'
+        image: 'https://via.placeholder.com/300x200/2563eb/ffffff?text=Salle+A',
+        openingHours: { start: '08:00', end: '18:00' },
+        maintenanceSchedule: []
     },
     {
         id: 2,
@@ -29,7 +31,9 @@ let resources = [
         price: 40.00,
         equipments: 'Écran TV, Tableau blanc, WiFi',
         status: 'available',
-        image: 'https://via.placeholder.com/300x200/3b82f6/ffffff?text=Salle+B'
+        image: 'https://via.placeholder.com/300x200/3b82f6/ffffff?text=Salle+B',
+        openingHours: { start: '08:00', end: '20:00' },
+        maintenanceSchedule: []
     },
     {
         id: 3,
@@ -41,7 +45,11 @@ let resources = [
         price: 25.00,
         equipments: 'Câbles HDMI, Télécommande',
         status: 'available',
-        image: 'https://via.placeholder.com/300x200/10b981/ffffff?text=Projecteur'
+        image: 'https://via.placeholder.com/300x200/10b981/ffffff?text=Projecteur',
+        openingHours: { start: '00:00', end: '23:59' },
+        maintenanceSchedule: [
+            { startDate: '2025-11-15', endDate: '2025-11-16', reason: 'Maintenance préventive' }
+        ]
     },
     {
         id: 4,
@@ -53,7 +61,9 @@ let resources = [
         price: 30.00,
         equipments: 'GPS, Climatisation',
         status: 'busy',
-        image: 'https://via.placeholder.com/300x200/f59e0b/ffffff?text=Vehicule'
+        image: 'https://via.placeholder.com/300x200/f59e0b/ffffff?text=Vehicule',
+        openingHours: { start: '07:00', end: '19:00' },
+        maintenanceSchedule: []
     }
 ];
 
@@ -108,6 +118,7 @@ let users = [
 let currentView = 'dashboard';
 let currentMonth = new Date();
 let editingBookingId = null;
+let editingResourceId = null;
 
 // ==================== INITIALIZATION ====================
 
@@ -347,7 +358,25 @@ function getFilteredBookings() {
 function createBooking(bookingData) {
     // Check for conflicts
     if (hasConflict(bookingData)) {
-        alert('Conflit détecté ! Cette ressource est déjà réservée pour cet horaire.');
+        const resource = resources.find(r => r.id == bookingData.resourceId);
+        const bookingDate = bookingData.date;
+        const hasMaintenance = resource && resource.maintenanceSchedule && resource.maintenanceSchedule.some(m => {
+            return m.startDate <= bookingDate && m.endDate >= bookingDate;
+        });
+        
+        if (hasMaintenance) {
+            alert('Conflit détecté ! Cette ressource est en maintenance pour cette date.');
+        } else if (resource && resource.openingHours) {
+            const bookingStart = bookingData.startTime;
+            const bookingEnd = bookingData.endTime;
+            if (bookingStart < resource.openingHours.start || bookingEnd > resource.openingHours.end) {
+                alert(`Conflit détecté ! Cette ressource n'est disponible que de ${resource.openingHours.start} à ${resource.openingHours.end}.`);
+            } else {
+                alert('Conflit détecté ! Cette ressource est déjà réservée pour cet horaire.');
+            }
+        } else {
+            alert('Conflit détecté ! Cette ressource est déjà réservée pour cet horaire.');
+        }
         return false;
     }
     
@@ -372,6 +401,28 @@ function createBooking(bookingData) {
 }
 
 function hasConflict(bookingData) {
+    // Check if resource is in maintenance
+    const resource = resources.find(r => r.id == bookingData.resourceId);
+    if (resource) {
+        const bookingDate = bookingData.date;
+        const hasMaintenance = resource.maintenanceSchedule && resource.maintenanceSchedule.some(m => {
+            return m.startDate <= bookingDate && m.endDate >= bookingDate;
+        });
+        if (hasMaintenance) {
+            return true; // Conflict with maintenance
+        }
+        
+        // Check opening hours
+        if (resource.openingHours) {
+            const bookingStart = bookingData.startTime;
+            const bookingEnd = bookingData.endTime;
+            if (bookingStart < resource.openingHours.start || bookingEnd > resource.openingHours.end) {
+                return true; // Outside opening hours
+            }
+        }
+    }
+    
+    // Check for time conflicts with other bookings
     return bookings.some(booking => {
         if (booking.id === editingBookingId) return false; // Skip the booking being edited
         if (booking.resourceId != bookingData.resourceId) return false;
@@ -491,29 +542,54 @@ function loadResources() {
         return;
     }
     
-    grid.innerHTML = filteredResources.map(resource => `
+    grid.innerHTML = filteredResources.map(resource => {
+        const hasMaintenance = resource.maintenanceSchedule && resource.maintenanceSchedule.some(m => {
+            const today = new Date().toISOString().split('T')[0];
+            return m.startDate <= today && m.endDate >= today;
+        });
+        const openingHours = resource.openingHours || { start: '00:00', end: '23:59' };
+        const statusText = hasMaintenance ? 'En maintenance' : 
+                          resource.status === 'available' ? 'Disponible' : 
+                          resource.status === 'busy' ? 'Occupé' : 
+                          resource.status === 'maintenance' ? 'En maintenance' : 'Indisponible';
+        const statusClass = hasMaintenance ? 'status-maintenance' : 
+                           resource.status === 'available' ? 'status-approved' : 'status-pending';
+        
+        return `
         <div class="resource-card">
-            <div class="resource-image" style="background: linear-gradient(135deg, ${getColorForCategory(resource.category)});">
-                <div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem;">
-                    ${getIconForCategory(resource.category)}
-                </div>
+            <div class="resource-image" style="position: relative; overflow: hidden;">
+                ${resource.image ? 
+                    `<img src="${resource.image}" alt="${resource.name}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                    `<div style="background: linear-gradient(135deg, ${getColorForCategory(resource.category)}); display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem;">
+                        ${getIconForCategory(resource.category)}
+                    </div>`
+                }
+                ${hasMaintenance ? '<div style="position: absolute; top: 10px; right: 10px; background: #ef4444; color: white; padding: 5px 10px; border-radius: 5px; font-size: 0.8rem;">🔧 Maintenance</div>' : ''}
             </div>
             <div class="resource-info">
                 <h3>${resource.name}</h3>
                 <span class="resource-category">${getCategoryText(resource.category)}</span>
                 <div class="resource-details">
+                    <p><strong>Description:</strong> ${resource.description || 'Aucune description'}</p>
                     <p><strong>Capacité:</strong> ${resource.capacity} ${resource.category === 'salle' ? 'personnes' : 'unité(s)'}</p>
                     <p><strong>Tarif:</strong> ${resource.price > 0 ? resource.price + '$ / ' + (resource.pricing === 'horaire' ? 'heure' : 'forfait') : 'Gratuit'}</p>
-                    <p><strong>Équipements:</strong> ${resource.equipments}</p>
-                    <p><strong>Statut:</strong> <span class="status-badge status-${resource.status === 'available' ? 'approved' : 'pending'}">${resource.status === 'available' ? 'Disponible' : 'Occupé'}</span></p>
+                    <p><strong>Horaires d'ouverture:</strong> ${openingHours.start} - ${openingHours.end}</p>
+                    <p><strong>Équipements:</strong> ${resource.equipments || 'Aucun'}</p>
+                    <p><strong>Statut:</strong> <span class="status-badge ${statusClass}">${statusText}</span></p>
+                    ${hasMaintenance ? `<p><strong>⚠️ Maintenance:</strong> ${resource.maintenanceSchedule.find(m => {
+                        const today = new Date().toISOString().split('T')[0];
+                        return m.startDate <= today && m.endDate >= today;
+                    })?.reason || 'Maintenance planifiée'}</p>` : ''}
                 </div>
                 <div class="resource-actions">
-                    <button class="btn btn-primary" onclick="bookResource(${resource.id})">Réserver</button>
+                    <button class="btn btn-primary" onclick="bookResource(${resource.id})" ${hasMaintenance || resource.status === 'maintenance' ? 'disabled' : ''}>Réserver</button>
                     <button class="btn btn-secondary" onclick="editResource(${resource.id})">Modifier</button>
+                    <button class="btn btn-warning" onclick="manageMaintenance(${resource.id})">🔧 Maintenance</button>
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function getFilteredResources() {
@@ -550,15 +626,83 @@ function editResource(id) {
     const resource = resources.find(r => r.id === id);
     if (!resource) return;
     
+    editingResourceId = id;
+    document.getElementById('resourceModalTitle').textContent = 'Modifier la ressource';
+    document.getElementById('resourceSubmitBtn').textContent = 'Modifier';
+    
     document.getElementById('resourceName').value = resource.name;
     document.getElementById('resourceCategory').value = resource.category;
     document.getElementById('resourceCapacity').value = resource.capacity;
-    document.getElementById('resourceDescription').value = resource.description;
+    document.getElementById('resourceDescription').value = resource.description || '';
     document.getElementById('resourcePricing').value = resource.pricing;
     document.getElementById('resourcePrice').value = resource.price;
-    document.getElementById('resourceEquipments').value = resource.equipments;
+    document.getElementById('resourceEquipments').value = resource.equipments || '';
+    document.getElementById('resourceImageUrl').value = resource.image || '';
+    document.getElementById('resourceOpeningStart').value = resource.openingHours?.start || '08:00';
+    document.getElementById('resourceOpeningEnd').value = resource.openingHours?.end || '18:00';
     
     openResourceModal();
+}
+
+function manageMaintenance(id) {
+    const resource = resources.find(r => r.id === id);
+    if (!resource) return;
+    
+    const maintenanceList = resource.maintenanceSchedule || [];
+    let maintenanceHTML = maintenanceList.length > 0 ? 
+        maintenanceList.map((m, idx) => `
+            <div style="padding: 10px; margin: 5px 0; background: #f3f4f6; border-radius: 5px;">
+                <strong>${formatDate(m.startDate)} - ${formatDate(m.endDate)}</strong><br>
+                <small>${m.reason || 'Maintenance planifiée'}</small>
+                <button onclick="removeMaintenance(${id}, ${idx})" style="float: right; background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Supprimer</button>
+            </div>
+        `).join('') : '<p>Aucune maintenance planifiée</p>';
+    
+    const startDate = prompt('Date de début de maintenance (YYYY-MM-DD):');
+    if (!startDate) return;
+    
+    const endDate = prompt('Date de fin de maintenance (YYYY-MM-DD):');
+    if (!endDate) return;
+    
+    const reason = prompt('Raison de la maintenance:') || 'Maintenance planifiée';
+    
+    if (!resource.maintenanceSchedule) {
+        resource.maintenanceSchedule = [];
+    }
+    
+    resource.maintenanceSchedule.push({
+        startDate: startDate,
+        endDate: endDate,
+        reason: reason
+    });
+    
+    // Update status if maintenance is active
+    const today = new Date().toISOString().split('T')[0];
+    if (startDate <= today && endDate >= today) {
+        resource.status = 'maintenance';
+    }
+    
+    loadResources();
+    alert('Maintenance planifiée avec succès');
+}
+
+function removeMaintenance(resourceId, maintenanceIndex) {
+    const resource = resources.find(r => r.id === resourceId);
+    if (!resource || !resource.maintenanceSchedule) return;
+    
+    resource.maintenanceSchedule.splice(maintenanceIndex, 1);
+    
+    // Check if still in maintenance
+    const today = new Date().toISOString().split('T')[0];
+    const hasActiveMaintenance = resource.maintenanceSchedule.some(m => 
+        m.startDate <= today && m.endDate >= today
+    );
+    
+    if (!hasActiveMaintenance && resource.status === 'maintenance') {
+        resource.status = 'available';
+    }
+    
+    loadResources();
 }
 
 // ==================== CALENDAR ====================
@@ -742,12 +886,19 @@ function closeBookingModalFunc() {
 function openResourceModal() {
     const modal = document.getElementById('resourceModal');
     modal.classList.add('active');
+    if (!editingResourceId) {
+        document.getElementById('resourceModalTitle').textContent = 'Ajouter une ressource';
+        document.getElementById('resourceSubmitBtn').textContent = 'Ajouter';
+    }
 }
 
 function closeResourceModalFunc() {
     const modal = document.getElementById('resourceModal');
     modal.classList.remove('active');
     document.getElementById('resourceForm').reset();
+    editingResourceId = null;
+    document.getElementById('resourceModalTitle').textContent = 'Ajouter une ressource';
+    document.getElementById('resourceSubmitBtn').textContent = 'Ajouter';
 }
 
 // ==================== FORMS ====================
@@ -813,26 +964,53 @@ function setupForms() {
         const pricing = document.getElementById('resourcePricing').value;
         const price = parseFloat(document.getElementById('resourcePrice').value) || 0;
         const equipments = document.getElementById('resourceEquipments').value;
+        const imageUrl = document.getElementById('resourceImageUrl').value;
+        const openingStart = document.getElementById('resourceOpeningStart').value || '08:00';
+        const openingEnd = document.getElementById('resourceOpeningEnd').value || '18:00';
 
-        const formData = {
-            id: resources.length + 1,
-            name,
-            category,
-            capacity,
-            description,
-            pricing,
-            price,
-            equipments,
-            status: 'available'
-        };
+        if (editingResourceId) {
+            // Update existing resource
+            const resource = resources.find(r => r.id === editingResourceId);
+            if (resource) {
+                resource.name = name;
+                resource.category = category;
+                resource.capacity = capacity;
+                resource.description = description;
+                resource.pricing = pricing;
+                resource.price = price;
+                resource.equipments = equipments;
+                resource.image = imageUrl || `https://via.placeholder.com/300x200/${Math.random().toString(16).substr(2,6)}/ffffff?text=${encodeURIComponent(name)}`;
+                resource.openingHours = { start: openingStart, end: openingEnd };
+                if (!resource.maintenanceSchedule) {
+                    resource.maintenanceSchedule = [];
+                }
+                alert('Ressource modifiée avec succès');
+            }
+            editingResourceId = null;
+        } else {
+            // Create new resource
+            const formData = {
+                id: resources.length + 1,
+                name,
+                category,
+                capacity,
+                description,
+                pricing,
+                price,
+                equipments,
+                status: 'available',
+                image: imageUrl || `https://via.placeholder.com/300x200/${Math.random().toString(16).substr(2,6)}/ffffff?text=${encodeURIComponent(name)}`,
+                openingHours: { start: openingStart, end: openingEnd },
+                maintenanceSchedule: []
+            };
 
-        // Build image using the name variable (avoid referencing formData during object literal creation)
-        formData.image = `https://via.placeholder.com/300x200/${Math.random().toString(16).substr(2,6)}/ffffff?text=${encodeURIComponent(name)}`;
+            resources.push(formData);
+            alert('Ressource ajoutée avec succès');
+        }
 
-        resources.push(formData);
         loadResources();
         closeResourceModalFunc();
-        alert('Ressource ajoutée avec succès');
+        updateStatistics();
     });
     
     // Settings form
