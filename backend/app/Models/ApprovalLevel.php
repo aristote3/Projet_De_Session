@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ApprovalLevel extends Model
 {
@@ -21,36 +19,24 @@ class ApprovalLevel extends Model
     ];
 
     protected $casts = [
-        'approved_at' => 'datetime',
         'level' => 'integer',
+        'approved_at' => 'datetime',
     ];
 
     /**
-     * Get the booking for this approval level
+     * Get the booking
      */
-    public function booking(): BelongsTo
+    public function booking()
     {
         return $this->belongsTo(Booking::class);
     }
 
     /**
-     * Get the approver user
+     * Get the approver
      */
-    public function approver(): BelongsTo
+    public function approver()
     {
         return $this->belongsTo(User::class, 'approver_id');
-    }
-
-    /**
-     * Check if all required levels are approved
-     */
-    public static function allLevelsApproved(int $bookingId, int $requiredLevels): bool
-    {
-        $approvedCount = self::where('booking_id', $bookingId)
-            ->where('status', 'approved')
-            ->count();
-
-        return $approvedCount >= $requiredLevels;
     }
 }
 

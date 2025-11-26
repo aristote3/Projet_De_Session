@@ -4,14 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\UserProfile;
-use App\Models\Group;
-use App\Models\Permission;
-use App\Models\UserCredit;
-use App\Models\Subscription;
-use App\Models\UserNotificationPreference;
+use App\Models\Booking;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 
@@ -20,111 +14,106 @@ class UserController extends Controller
     /**
      * Display a listing of users
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
-        $query = User::with(['profile', 'groups', 'subscription']);
+        $query = User::query();
 
+        // Filter by role
         if ($request->has('role')) {
             $query->where('role', $request->role);
         }
 
-        if ($request->has('group')) {
-            $query->whereHas('groups', function ($q) use ($request) {
-                $q->where('groups.id', $request->group);
-            });
-        }
-
+        // Filter by status
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        $users = $query->paginate(15);
+        // Search
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
 
-        return response()->json($users);
+        $perPage = $request->get('per_page', 15);
+        $users = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $users->items(),
+            'meta' => [
+                'current_page' => $users->currentPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+                'last_page' => $users->lastPage(),
+            ]
+        ]);
     }
 
     /**
      * Store a newly created user
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8',
-            'role' => 'sometimes|in:admin,manager,user',
+            'password' => 'required|string|min:6',
+            'role' => 'nullable|in:admin,manager,user',
+            'group' => 'nullable|string',
             'quota' => 'nullable|integer|min:0',
-            'group_ids' => 'nullable|array',
-            'group_ids.*' => 'exists:groups,id',
+            'status' => 'nullable|in:active,inactive',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->get('role', 'user'),
-            'quota' => $request->quota,
-            'status' => 'active',
-        ]);
+        $data = $validator->validated();
+        $data['password'] = Hash::make($data['password']);
 
-        // Attach groups
-        if ($request->has('group_ids')) {
-            $user->groups()->attach($request->group_ids);
-        }
+        $user = User::create($data);
 
-        // Create profile
-        UserProfile::create(['user_id' => $user->id]);
-
-        return response()->json($user->load(['profile', 'groups']), 201);
+        return response()->json([
+            'data' => $user,
+            'message' => 'User created successfully'
+        ], 201);
     }
 
     /**
-     * Display the specified user with full details
+     * Display the specified user
      */
-    public function show(User $user): JsonResponse
+    public function show(User $user)
     {
-        $user->load([
-            'profile',
-            'groups.permissions',
-            'permissions',
-            'subscription',
-            'credits' => function ($query) {
-                $query->where(function ($q) {
-                    $q->whereNull('expires_at')
-                      ->orWhere('expires_at', '>', now());
-                });
-            },
-            'notificationPreferences',
+        return response()->json([
+            'data' => $user->load(['groups', 'permissions'])
         ]);
-
-        $user->total_credits = UserCredit::getTotalCredits($user->id);
-        $user->booking_history = $user->getBookingHistory(10);
-
-        return response()->json($user);
     }
 
     /**
      * Update the specified user
      */
-    public function update(Request $request, User $user): JsonResponse
+    public function update(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
-            'password' => 'sometimes|string|min:8',
-            'role' => 'sometimes|in:admin,manager,user',
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
+            'password' => 'nullable|string|min:6',
+            'role' => 'nullable|in:admin,manager,user',
+            'group' => 'nullable|string',
             'quota' => 'nullable|integer|min:0',
-            'status' => 'sometimes|in:active,inactive',
-            'group_ids' => 'nullable|array',
-            'group_ids.*' => 'exists:groups,id',
+            'status' => 'nullable|in:active,inactive',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $data = $validator->validated();
@@ -134,166 +123,140 @@ class UserController extends Controller
 
         $user->update($data);
 
-        // Update groups
-        if ($request->has('group_ids')) {
-            $user->groups()->sync($request->group_ids);
-        }
-
-        return response()->json($user->load(['profile', 'groups']));
+        return response()->json([
+            'data' => $user,
+            'message' => 'User updated successfully'
+        ]);
     }
 
     /**
      * Update user profile
      */
-    public function updateProfile(Request $request, User $user): JsonResponse
+    public function updateProfile(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => 'nullable|string',
-            'department' => 'nullable|string',
-            'position' => 'nullable|string',
-            'preferred_language' => 'nullable|string',
-            'timezone' => 'nullable|string',
-            'date_format' => 'nullable|string',
-            'time_format' => 'nullable|string',
-            'theme' => 'nullable|in:light,dark',
-            'preferences' => 'nullable|array',
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
+            'password' => 'nullable|string|min:6',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        $profile = $user->profile ?? UserProfile::create(['user_id' => $user->id]);
-        $profile->update($validator->validated());
+        $data = $validator->validated();
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
 
-        return response()->json($profile);
+        $user->update($data);
+
+        return response()->json([
+            'data' => $user,
+            'message' => 'Profile updated successfully'
+        ]);
     }
 
     /**
      * Get user booking history
      */
-    public function bookingHistory(User $user, Request $request): JsonResponse
+    public function bookingHistory(User $user, Request $request)
     {
-        $limit = $request->get('limit', 20);
-        $history = $user->getBookingHistory($limit);
+        $query = Booking::where('user_id', $user->id)
+            ->with(['resource'])
+            ->orderBy('date', 'desc');
 
-        return response()->json($history);
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $perPage = $request->get('per_page', 15);
+        $bookings = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $bookings->items(),
+            'meta' => [
+                'current_page' => $bookings->currentPage(),
+                'per_page' => $bookings->perPage(),
+                'total' => $bookings->total(),
+                'last_page' => $bookings->lastPage(),
+            ]
+        ]);
     }
 
     /**
      * Add credits to user
      */
-    public function addCredits(Request $request, User $user): JsonResponse
+    public function addCredits(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:0',
-            'type' => 'required|in:purchase,bonus,refund',
-            'expires_at' => 'nullable|date',
-            'source' => 'nullable|string',
-            'notes' => 'nullable|string',
+            'amount' => 'required|integer|min:1',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        $credit = UserCredit::create([
-            'user_id' => $user->id,
-            ...$validator->validated(),
-        ]);
-
+        // TODO: Implement credit system
         return response()->json([
-            'message' => 'Credits added successfully',
-            'credit' => $credit,
-            'total_credits' => UserCredit::getTotalCredits($user->id),
-        ], 201);
+            'message' => 'Credit system not implemented yet'
+        ], 501);
     }
 
     /**
      * Get user credits
      */
-    public function getCredits(User $user): JsonResponse
+    public function getCredits(User $user)
     {
-        $credits = $user->credits()
-            ->where(function ($query) {
-                $query->whereNull('expires_at')
-                      ->orWhere('expires_at', '>', now());
-            })
-            ->get();
-
+        // TODO: Implement credit system
         return response()->json([
-            'total_credits' => UserCredit::getTotalCredits($user->id),
-            'credits' => $credits,
+            'data' => [
+                'credits' => 0,
+                'quota' => $user->quota ?? 0,
+            ]
         ]);
     }
 
     /**
-     * Create or update subscription
+     * Update user subscription
      */
-    public function updateSubscription(Request $request, User $user): JsonResponse
+    public function updateSubscription(Request $request, User $user)
     {
-        $validator = Validator::make($request->all(), [
-            'plan_type' => 'required|in:basic,premium,enterprise',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'auto_renew' => 'boolean',
-            'monthly_limit' => 'nullable|integer|min:0',
-            'features' => 'nullable|array',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $subscription = $user->subscription ?? new Subscription(['user_id' => $user->id]);
-        $subscription->fill($validator->validated());
-        $subscription->status = 'active';
-        $subscription->save();
-
-        return response()->json($subscription);
+        // TODO: Implement subscription system
+        return response()->json([
+            'message' => 'Subscription system not implemented yet'
+        ], 501);
     }
 
     /**
-     * Update notification preferences
+     * Update user notification preferences
      */
-    public function updateNotificationPreferences(Request $request, User $user): JsonResponse
+    public function updateNotificationPreferences(Request $request, User $user)
     {
-        $validator = Validator::make($request->all(), [
-            'notification_type' => 'required|string',
-            'email_enabled' => 'boolean',
-            'sms_enabled' => 'boolean',
-            'push_enabled' => 'boolean',
-            'frequency' => 'sometimes|in:immediate,daily,weekly',
-            'quiet_hours_start' => 'nullable|date_format:H:i',
-            'quiet_hours_end' => 'nullable|date_format:H:i',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $preference = UserNotificationPreference::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'notification_type' => $request->notification_type,
-            ],
-            $validator->validated()
-        );
-
-        return response()->json($preference);
+        // TODO: Implement notification preferences
+        return response()->json([
+            'message' => 'Notification preferences not implemented yet'
+        ], 501);
     }
 
     /**
      * Get user permissions
      */
-    public function getPermissions(User $user): JsonResponse
+    public function getPermissions(User $user)
     {
-        $permissions = $user->getAllPermissions();
+        $permissions = $user->permissions;
+        $groupPermissions = $user->groups->flatMap->permissions;
+
+        $allPermissions = $permissions->merge($groupPermissions)->unique('id');
 
         return response()->json([
-            'direct_permissions' => $user->permissions,
-            'group_permissions' => $user->groups()->with('permissions')->get()->pluck('permissions')->flatten(),
-            'all_permissions' => $permissions,
+            'data' => $allPermissions->values()
         ]);
     }
 }

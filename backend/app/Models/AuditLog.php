@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AuditLog extends Model
 {
@@ -28,33 +26,17 @@ class AuditLog extends Model
     /**
      * Get the user who performed the action
      */
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
 
     /**
-     * Get the model that was changed
+     * Get the model instance
      */
-    public function model(): MorphTo
+    public function model()
     {
         return $this->morphTo();
-    }
-
-    /**
-     * Log an action
-     */
-    public static function log(string $action, $model, ?int $userId = null, array $changes = []): self
-    {
-        return self::create([
-            'user_id' => $userId ?? auth()->id(),
-            'action' => $action,
-            'model_type' => get_class($model),
-            'model_id' => $model->id,
-            'changes' => $changes,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
     }
 }
 

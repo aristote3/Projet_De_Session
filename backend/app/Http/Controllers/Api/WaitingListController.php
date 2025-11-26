@@ -4,55 +4,46 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\WaitingList;
-use App\Services\WaitingListService;
+use App\Models\Booking;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
 class WaitingListController extends Controller
 {
-    protected $waitingListService;
-
-    public function __construct(WaitingListService $waitingListService)
-    {
-        $this->waitingListService = $waitingListService;
-    }
-
     /**
-     * Get waiting list entries
+     * Display a listing of waiting lists
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         $query = WaitingList::with(['resource', 'user'])
             ->where('status', 'active');
 
+        // Filter by resource
         if ($request->has('resource_id')) {
             $query->where('resource_id', $request->resource_id);
         }
 
+        // Filter by user
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
-        if ($request->has('date')) {
-            $query->where('date', $request->date);
-        }
+        $waitingLists = $query->orderBy('priority', 'desc')
+            ->orderBy('created_at', 'asc')
+            ->get();
 
-        $entries = $query->orderBy('priority', 'desc')
-                        ->orderBy('created_at', 'asc')
-                        ->paginate(15);
-
-        return response()->json($entries);
+        return response()->json([
+            'data' => $waitingLists
+        ]);
     }
 
     /**
-     * Add to waiting list
+     * Store a newly created waiting list entry
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'resource_id' => 'required|exists:resources,id',
-            'user_id' => 'required|exists:users,id',
             'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
@@ -60,52 +51,95 @@ class WaitingListController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $entry = $this->waitingListService->addToWaitingList(
-            $request->resource_id,
-            $request->user_id,
-            $request->date,
-            $request->start_time,
-            $request->end_time,
-            $request->get('priority', 0)
-        );
-
-        return response()->json($entry->load(['resource', 'user']), 201);
-    }
-
-    /**
-     * Remove from waiting list
-     */
-    public function destroy(WaitingList $waitingList): JsonResponse
-    {
-        $this->waitingListService->removeFromWaitingList($waitingList->id);
-        return response()->json(['message' => 'Removed from waiting list']);
-    }
-
-    /**
-     * Manually promote waiting list entry to booking
-     */
-    public function promote(WaitingList $waitingList): JsonResponse
-    {
-        $booking = $this->waitingListService->checkAndPromote(
-            $waitingList->resource_id,
-            $waitingList->date->toDateString(),
-            $waitingList->start_time,
-            $waitingList->end_time
-        );
-
-        if ($booking) {
             return response()->json([
-                'message' => 'Promoted to booking successfully',
-                'booking' => $booking->load(['resource', 'user'])
-            ]);
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        $waitingList = WaitingList::create([
+            ...$validator->validated(),
+            'user_id' => auth()->id() ?? 1, // TODO: Use actual auth
+            'status' => 'active',
+        ]);
 
         return response()->json([
-            'message' => 'Cannot promote: resource is not available'
-        ], 422);
+            'data' => $waitingList->load(['resource', 'user']),
+            'message' => 'Added to waiting list successfully'
+        ], 201);
+    }
+
+    /**
+     * Remove the specified waiting list entry
+     */
+    public function destroy(WaitingList $waitingList)
+    {
+        $waitingList->update(['status' => 'cancelled']);
+
+        return response()->json([
+            'message' => 'Removed from waiting list successfully'
+        ]);
+    }
+
+    /**
+     * Promote waiting list entry to booking
+     */
+    public function promote(WaitingList $waitingList)
+    {
+        if ($waitingList->status !== 'active') {
+            return response()->json([
+                'message' => 'Waiting list entry is not active'
+            ], 400);
+        }
+
+        // Check if slot is still available
+        $overlapping = Booking::where('resource_id', $waitingList->resource_id)
+            ->where('date', $waitingList->date)
+            ->where('status', '!=', 'cancelled')
+            ->where(function($query) use ($waitingList) {
+                $query->whereBetween('start_time', [$waitingList->start_time, $waitingList->end_time])
+                      ->orWhereBetween('end_time', [$waitingList->start_time, $waitingList->end_time])
+                      ->orWhere(function($q) use ($waitingList) {
+                          $q->where('start_time', '<=', $waitingList->start_time)
+                            ->where('end_time', '>=', $waitingList->end_time);
+                      });
+            })
+            ->exists();
+
+        if ($overlapping) {
+            return response()->json([
+                'message' => 'Time slot is no longer available'
+            ], 409);
+        }
+
+        // Create booking
+        $start = \Carbon\Carbon::parse($waitingList->date . ' ' . $waitingList->start_time);
+        $end = \Carbon\Carbon::parse($waitingList->date . ' ' . $waitingList->end_time);
+        $duration = $start->diffInHours($end);
+
+        $booking = Booking::create([
+            'resource_id' => $waitingList->resource_id,
+            'user_id' => $waitingList->user_id,
+            'date' => $waitingList->date,
+            'start_time' => $waitingList->start_time,
+            'end_time' => $waitingList->end_time,
+            'duration' => $duration,
+            'status' => 'approved',
+        ]);
+
+        // Update waiting list status
+        $waitingList->update([
+            'status' => 'promoted',
+            'notified_at' => now(),
+        ]);
+
+        return response()->json([
+            'data' => [
+                'booking' => $booking->load(['resource', 'user']),
+                'waiting_list' => $waitingList,
+            ],
+            'message' => 'Waiting list entry promoted to booking successfully'
+        ]);
     }
 }
 

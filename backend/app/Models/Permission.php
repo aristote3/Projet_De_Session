@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Permission extends Model
 {
@@ -19,15 +18,15 @@ class Permission extends Model
     /**
      * Get groups that have this permission
      */
-    public function groups(): BelongsToMany
+    public function groups()
     {
         return $this->belongsToMany(Group::class, 'group_permissions');
     }
 
     /**
-     * Get users that have this permission
+     * Get users that have this permission directly
      */
-    public function users(): BelongsToMany
+    public function users()
     {
         return $this->belongsToMany(User::class, 'user_permissions');
     }

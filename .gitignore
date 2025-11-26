@@ -1,0 +1,59 @@
+# Laravel
+/vendor/
+/node_modules/
+/.env
+/.env.backup
+/.env.production
+/.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/.idea
+/.vscode
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Cache
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Compiled assets
+/public/hot
+/public/storage
+/public/build
+/storage/*.key
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+frontend/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+nul
+*.docx
+*.doc

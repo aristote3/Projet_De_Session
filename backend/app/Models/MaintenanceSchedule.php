@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MaintenanceSchedule extends Model
 {
@@ -24,20 +23,11 @@ class MaintenanceSchedule extends Model
     ];
 
     /**
-     * Get the resource for this maintenance schedule
+     * Get the resource
      */
-    public function resource(): BelongsTo
+    public function resource()
     {
         return $this->belongsTo(Resource::class);
-    }
-
-    /**
-     * Check if maintenance is active
-     */
-    public function isActive(): bool
-    {
-        $today = now()->toDateString();
-        return $this->start_date <= $today && $this->end_date >= $today;
     }
 }
 

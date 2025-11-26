@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ConflictResolution extends Model
 {
@@ -26,9 +25,9 @@ class ConflictResolution extends Model
     ];
 
     /**
-     * Get the booking with conflict
+     * Get the booking
      */
-    public function booking(): BelongsTo
+    public function booking()
     {
         return $this->belongsTo(Booking::class);
     }
@@ -36,7 +35,7 @@ class ConflictResolution extends Model
     /**
      * Get the conflicting booking
      */
-    public function conflictWithBooking(): BelongsTo
+    public function conflictWithBooking()
     {
         return $this->belongsTo(Booking::class, 'conflict_with_booking_id');
     }
@@ -44,7 +43,7 @@ class ConflictResolution extends Model
     /**
      * Get the user who resolved the conflict
      */
-    public function resolver(): BelongsTo
+    public function resolvedBy()
     {
         return $this->belongsTo(User::class, 'resolved_by');
     }

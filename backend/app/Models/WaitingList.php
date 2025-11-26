@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WaitingList extends Model
 {
@@ -23,37 +22,26 @@ class WaitingList extends Model
 
     protected $casts = [
         'date' => 'date',
-        'notified_at' => 'datetime',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
         'priority' => 'integer',
+        'notified_at' => 'datetime',
     ];
 
     /**
-     * Get the resource for this waiting list entry
+     * Get the resource
      */
-    public function resource(): BelongsTo
+    public function resource()
     {
         return $this->belongsTo(Resource::class);
     }
 
     /**
-     * Get the user for this waiting list entry
+     * Get the user
      */
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Check if this entry can be promoted to a booking
-     */
-    public function canBePromoted(): bool
-    {
-        $resource = $this->resource;
-        return $resource->isAvailableAt(
-            $this->date->toDateString(),
-            $this->start_time,
-            $this->end_time
-        );
     }
 }
 

@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Group extends Model
 {
@@ -30,7 +28,7 @@ class Group extends Model
     /**
      * Get users in this group
      */
-    public function users(): BelongsToMany
+    public function users()
     {
         return $this->belongsToMany(User::class, 'user_groups');
     }
@@ -38,17 +36,9 @@ class Group extends Model
     /**
      * Get permissions for this group
      */
-    public function permissions(): BelongsToMany
+    public function permissions()
     {
         return $this->belongsToMany(Permission::class, 'group_permissions');
-    }
-
-    /**
-     * Check if group has a specific permission
-     */
-    public function hasPermission(string $permission): bool
-    {
-        return $this->permissions()->where('name', $permission)->exists();
     }
 }
 
