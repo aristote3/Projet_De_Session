@@ -17,10 +17,10 @@ if not exist "node_modules" (
     )
 )
 
-echo Demarrage du serveur React sur http://localhost:3000
+echo Demarrage du serveur React sur http://localhost:5173
 echo.
 echo Ouvrez votre navigateur et allez sur:
-echo   http://localhost:3000
+echo   http://localhost:5173
 echo.
 echo Appuyez sur Ctrl+C pour arreter le serveur
 echo.

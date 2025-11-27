@@ -4,6 +4,7 @@ import { BellOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { logout } from '../../store/slices/authSlice'
+import api from '../../utils/api'
 
 const { Header } = Layout
 
@@ -12,9 +13,18 @@ const AppHeader = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    dispatch(logout())
-    navigate('/login')
+  const handleLogout = async () => {
+    try {
+      // Appeler l'API pour déconnecter (invalider le token)
+      await api.post('/auth/logout')
+    } catch (err) {
+      // Même en cas d'erreur, on déconnecte localement
+      console.error('Erreur lors de la déconnexion:', err)
+    } finally {
+      // Déconnecter localement dans tous les cas
+      dispatch(logout())
+      navigate('/login')
+    }
   }
 
   const menuItems = [

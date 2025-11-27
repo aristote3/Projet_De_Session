@@ -22,7 +22,7 @@ return new class extends Migration
             $table->index('status');
 
             // Check constraint: end_date must be >= start_date
-            $table->check('end_date >= start_date');
+            // Note: Laravel 10 doesn't support check() method, validation is handled in the model
         });
     }
 

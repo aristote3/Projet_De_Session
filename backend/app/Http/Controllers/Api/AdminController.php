@@ -37,10 +37,46 @@ class AdminController extends Controller
             ->limit(10)
             ->get();
 
+        // Get clients (managers) with their statistics
+        $clients = User::where('role', 'manager')
+            ->withCount(['bookings' => function ($query) {
+                $query->where('status', 'approved');
+            }])
+            ->get()
+            ->map(function ($manager) {
+                // Get resources count for this manager (if manager has resources)
+                $resourcesCount = Resource::where('created_by', $manager->id)->count();
+                
+                // Calculate revenue (simplified - can be enhanced)
+                $revenue = Booking::whereHas('user', function ($q) use ($manager) {
+                    // Get bookings from users in this manager's organization
+                    // This is simplified - in real app, you'd have organization/tenant structure
+                })
+                ->where('status', 'approved')
+                ->sum(DB::raw('duration * 10')); // Simplified revenue calculation
+
+                return [
+                    'id' => $manager->id,
+                    'name' => $manager->name . ' Organization', // Simplified
+                    'manager' => $manager->name,
+                    'email' => $manager->email,
+                    'subscription' => 'Premium', // TODO: Add subscription model
+                    'status' => $manager->status ?? 'active',
+                    'users' => User::where('role', 'user')->count(), // Simplified
+                    'resources' => $resourcesCount,
+                    'bookings' => $manager->bookings_count,
+                    'revenue' => $revenue,
+                    'createdAt' => $manager->created_at->format('Y-m-d'),
+                    'growth' => 0, // TODO: Calculate growth
+                    'lastActivity' => $manager->updated_at->toIso8601String(),
+                ];
+            });
+
         return response()->json([
             'data' => [
                 'stats' => $stats,
                 'recent_bookings' => $recentBookings,
+                'clients' => $clients,
             ]
         ]);
     }

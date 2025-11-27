@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ResourceController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,7 +13,20 @@ use App\Http\Controllers\Api\CalendarController;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('api')->group(function () {
+// Auth routes (publiques - pas de middleware auth)
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+});
+
+// Auth routes protégées
+Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']);
+});
+
+// Routes protégées par authentification
+Route::middleware(['api', 'auth:sanctum'])->group(function () {
     // Resources
     Route::prefix('resources')->group(function () {
         Route::get('/', [ResourceController::class, 'index']);

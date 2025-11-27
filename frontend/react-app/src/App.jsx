@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux'
 import AppHeader from './components/Layout/AppHeader'
 import AppSider from './components/Layout/AppSider'
 import ProtectedRoute from './components/ProtectedRoute'
+import ErrorBoundary from './components/ErrorBoundary'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -50,8 +51,9 @@ function App() {
   }
 
   return (
-    <Router>
-      <Routes>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
         {/* Redirection par défaut */}
         <Route path="/" element={<Navigate to={getDefaultRoute()} replace />} />
         
@@ -121,7 +123,8 @@ function App() {
           <Route path="*" element={<Navigate to="/home" replace />} />
         )}
       </Routes>
-    </Router>
+      </Router>
+    </ErrorBoundary>
   )
 }
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd'
 import { UserOutlined, LockOutlined, MailOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import api from '../utils/api'
 
 const { Title, Text } = Typography
 
@@ -24,11 +25,13 @@ const Register = () => {
     setError(null)
 
     try {
-      // Simulation d'une inscription
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Ici, vous pouvez ajouter l'appel API pour l'inscription
-      // const response = await axios.post('/api/register', values)
+      // Appel API réel
+      const response = await api.post('/auth/register', {
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        password_confirmation: values.confirmPassword,
+      })
 
       setSuccess(true)
       
@@ -37,7 +40,19 @@ const Register = () => {
         navigate('/login')
       }, 2000)
     } catch (err) {
-      setError('Erreur lors de l\'inscription. Veuillez réessayer.')
+      // Gérer les erreurs de l'API
+      if (err.response?.status === 422) {
+        // Erreurs de validation
+        const errors = err.response.data.errors
+        const firstError = Object.values(errors)[0]?.[0]
+        setError(firstError || 'Erreur de validation. Vérifiez vos informations.')
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message)
+      } else if (err.message === 'Network Error') {
+        setError('Impossible de se connecter au serveur. Vérifiez que le backend est démarré.')
+      } else {
+        setError('Erreur lors de l\'inscription. Veuillez réessayer.')
+      }
     } finally {
       setLoading(false)
     }

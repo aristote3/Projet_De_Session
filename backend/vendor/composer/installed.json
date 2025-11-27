@@ -3116,6 +3116,56 @@
             "install-path": "../microsoft/kiota-serialization-text"
         },
         {
+            "name": "microsoft/microsoft-graph",
+            "version": "v2.51.0",
+            "version_normalized": "2.51.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/microsoftgraph/msgraph-sdk-php.git",
+                "reference": "d77461fb5142d38e2e5313296937b8a771410c34"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/microsoftgraph/msgraph-sdk-php/zipball/d77461fb5142d38e2e5313296937b8a771410c34",
+                "reference": "d77461fb5142d38e2e5313296937b8a771410c34",
+                "shasum": ""
+            },
+            "require": {
+                "microsoft/microsoft-graph-core": "^2.2.1",
+                "php": "^8.0 || ^7.4"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^0.12.90 || ^1.0.0",
+                "phpunit/phpunit": "^8.0 || ^9.0"
+            },
+            "time": "2025-11-20T01:20:23+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Microsoft\\Graph\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Microsoft Graph Client Tooling",
+                    "email": "graphtooling@service.microsoft.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "The Microsoft Graph SDK for PHP",
+            "homepage": "https://developer.microsoft.com/en-us/graph",
+            "support": {
+                "issues": "https://github.com/microsoftgraph/msgraph-sdk-php/issues",
+                "source": "https://github.com/microsoftgraph/msgraph-sdk-php/tree/v2.51.0"
+            },
+            "install-path": "../microsoft/microsoft-graph"
+        },
+        {
             "name": "microsoft/microsoft-graph-core",
             "version": "v2.3.1",
             "version_normalized": "2.3.1.0",

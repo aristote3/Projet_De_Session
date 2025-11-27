@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Typography, Table, Tag, Button, Space, Input, Select, DatePicker, Row, Col, Statistic, Timeline, Alert, Tabs } from 'antd'
 import { SearchOutlined, ReloadOutlined, DownloadOutlined, WarningOutlined, CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -17,93 +18,50 @@ const AdminMonitoring = () => {
   const [logType, setLogType] = useState('audit')
 
   useEffect(() => {
-    // TODO: Fetch logs from API
-    setAuditLogs([
-      {
-        id: 1,
-        timestamp: '2024-12-10T10:30:00',
-        user: 'admin@youmanage.com',
-        action: 'create',
-        resource: 'client',
-        resourceId: 123,
-        details: 'Client "Acme Corp" créé',
-        ip: '192.168.1.1',
-      },
-      {
-        id: 2,
-        timestamp: '2024-12-10T09:15:00',
-        user: 'manager@acme.com',
-        action: 'update',
-        resource: 'booking',
-        resourceId: 456,
-        details: 'Réservation modifiée',
-        ip: '192.168.1.2',
-      },
-    ])
+    const fetchLogs = async () => {
+      try {
+        setLoading(true)
+        // Fetch audit trail from API
+        const response = await api.get('/admin/audit-trail', {
+          params: {
+            per_page: 50,
+          }
+        })
 
-    setErrorLogs([
-      {
-        id: 1,
-        timestamp: '2024-12-10T11:00:00',
-        level: 'error',
-        message: 'Database connection timeout',
-        stack: 'Error: Connection timeout...',
-        user: 'system',
-        endpoint: '/api/bookings',
-      },
-      {
-        id: 2,
-        timestamp: '2024-12-10T10:45:00',
-        level: 'warning',
-        message: 'API rate limit exceeded',
-        stack: null,
-        user: 'client-123',
-        endpoint: '/api/resources',
-      },
-    ])
+        const logs = response.data.data || []
+        const auditLogsData = logs.map((log) => ({
+          id: log.id,
+          timestamp: log.created_at,
+          user: log.user?.email || 'Unknown',
+          action: log.action || 'unknown',
+          resource: log.model_type || 'unknown',
+          resourceId: log.model_id || 0,
+          details: log.description || log.action,
+          ip: log.ip_address || 'N/A',
+        }))
 
-    setSecurityEvents([
-      {
-        id: 1,
-        timestamp: '2024-12-10T12:00:00',
-        type: 'failed_login',
-        user: 'unknown@example.com',
-        ip: '192.168.1.100',
-        details: '5 tentatives de connexion échouées',
-        severity: 'high',
-      },
-      {
-        id: 2,
-        timestamp: '2024-12-10T11:30:00',
-        type: 'suspicious_activity',
-        user: 'manager@acme.com',
-        ip: '192.168.1.50',
-        details: 'Accès depuis une nouvelle localisation',
-        severity: 'medium',
-      },
-    ])
+        setAuditLogs(auditLogsData)
+        
+        // Error logs and security events are not yet implemented in backend
+        // Keep them empty for now
+        setErrorLogs([])
+        setSecurityEvents([])
+        setApiUsage([])
+      } catch (error) {
+        console.error('Erreur lors du chargement des logs:', error)
+        // Fallback to empty arrays
+        setAuditLogs([])
+        setErrorLogs([])
+        setSecurityEvents([])
+        setApiUsage([])
+        setLoading(false)
+      }
+    }
 
-    setApiUsage([
-      {
-        id: 1,
-        endpoint: '/api/bookings',
-        method: 'GET',
-        requests: 1250,
-        avgResponseTime: 120,
-        errorRate: 0.5,
-        date: '2024-12-10',
-      },
-      {
-        id: 2,
-        endpoint: '/api/resources',
-        method: 'GET',
-        requests: 890,
-        avgResponseTime: 95,
-        errorRate: 0.2,
-        date: '2024-12-10',
-      },
-    ])
-  }, [])
+    if (logType === 'audit') {
+      fetchLogs()
+    }
+  }, [dateRange, logType])
 
   const getLogLevelColor = (level) => {
     const colorMap = {

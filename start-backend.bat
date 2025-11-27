@@ -35,13 +35,47 @@ if not exist .env (
     exit /b 1
 )
 
-echo Demarrage du serveur backend Laravel sur http://localhost:8000
+REM Verifier si le port 8001 est libre
+echo Verification du port 8001...
+netstat -ano | findstr :8001 | findstr LISTENING >nul
+if %ERRORLEVEL% EQU 0 (
+    echo [ATTENTION] Le port 8001 est deja utilise
+    echo Liberation du port...
+    
+    REM Tuer le processus utilisant le port 8001
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8001 ^| findstr LISTENING') do (
+        echo Arret du processus PID %%a...
+        taskkill /PID %%a /F >nul 2>&1
+    )
+    
+    timeout /t 2 /nobreak >nul
+    
+    REM Verifier a nouveau
+    netstat -ano | findstr :8001 | findstr LISTENING >nul
+    if %ERRORLEVEL% EQU 0 (
+        echo [ERREUR] Impossible de liberer le port 8001
+        echo Utilisation du port 8002...
+        set PORT=8002
+        echo.
+        echo [ATTENTION] Le serveur demarre sur le port 8002
+        echo Tu devras mettre a jour la configuration frontend si necessaire
+    ) else (
+        echo [OK] Port 8001 libere
+        set PORT=8001
+    )
+) else (
+    echo [OK] Port 8001 disponible
+    set PORT=8001
+)
+
 echo.
-echo API disponible sur: http://localhost:8000/api
+echo Demarrage du serveur backend Laravel sur http://127.0.0.1:%PORT%
+echo.
+echo API disponible sur: http://127.0.0.1:%PORT%/api
 echo Documentation: backend\docs\API.md
 echo.
 echo Appuyez sur Ctrl+C pour arreter le serveur
 echo.
 
-php artisan serve --host=127.0.0.1 --port=8000
+php artisan serve --host=127.0.0.1 --port=%PORT%
 

@@ -23,11 +23,13 @@ import {
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 
 const AdminDashboard = () => {
   const navigate = useNavigate()
+  const { user, isAuthenticated } = useSelector((state) => state.auth)
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(false)
   const [recentActivity, setRecentActivity] = useState([])
@@ -35,117 +37,73 @@ const AdminDashboard = () => {
   const [topClients, setTopClients] = useState([])
   const [systemHealth, setSystemHealth] = useState({})
 
+  // Debug: Vérifier l'authentification
   useEffect(() => {
-    // TODO: Fetch clients (managers) from API
-    // Simulated data for now
-    setClients([
-      {
-        id: 1,
-        name: 'Acme Corporation',
-        manager: 'John Doe',
-        email: 'john@acme.com',
-        subscription: 'Premium',
-        status: 'active',
-        users: 45,
-        resources: 12,
-        bookings: 234,
-        revenue: 12500,
-        createdAt: '2024-01-15',
-        growth: 15.5,
-        lastActivity: '2024-12-10T14:30:00',
-      },
-      {
-        id: 2,
-        name: 'TechStart Inc',
-        manager: 'Jane Smith',
-        email: 'jane@techstart.com',
-        subscription: 'Basic',
-        status: 'active',
-        users: 23,
-        resources: 8,
-        bookings: 156,
-        revenue: 7800,
-        createdAt: '2024-02-20',
-        growth: 8.2,
-        lastActivity: '2024-12-10T12:15:00',
-      },
-      {
-        id: 3,
-        name: 'Global Services',
-        manager: 'Bob Johnson',
-        email: 'bob@globalservices.com',
-        subscription: 'Enterprise',
-        status: 'active',
-        users: 120,
-        resources: 35,
-        bookings: 890,
-        revenue: 45000,
-        createdAt: '2023-11-10',
-        growth: 22.3,
-        lastActivity: '2024-12-10T16:45:00',
-      },
-      {
-        id: 4,
-        name: 'StartupHub',
-        manager: 'Alice Brown',
-        email: 'alice@startuphub.com',
-        subscription: 'Premium',
-        status: 'active',
-        users: 67,
-        resources: 18,
-        bookings: 412,
-        revenue: 18900,
-        createdAt: '2024-03-05',
-        growth: 31.7,
-        lastActivity: '2024-12-10T15:20:00',
-      },
-      {
-        id: 5,
-        name: 'Digital Workspace',
-        manager: 'Charlie Wilson',
-        email: 'charlie@digital.com',
-        subscription: 'Basic',
-        status: 'active',
-        users: 34,
-        resources: 10,
-        bookings: 201,
-        revenue: 9200,
-        createdAt: '2024-04-12',
-        growth: -2.1,
-        lastActivity: '2024-12-09T10:00:00',
-      },
-    ])
+    console.log('AdminDashboard - Auth state:', { isAuthenticated, userRole: user?.role })
+    if (!isAuthenticated || user?.role !== 'admin') {
+      console.warn('AdminDashboard - Accès refusé:', { isAuthenticated, role: user?.role })
+    }
+  }, [isAuthenticated, user])
 
-    // Recent activity
-    setRecentActivity([
-      { id: 1, type: 'client_created', client: 'StartupHub', time: '2024-12-10T16:00:00', icon: <TeamOutlined />, color: 'green' },
-      { id: 2, type: 'subscription_upgraded', client: 'TechStart Inc', time: '2024-12-10T15:30:00', icon: <RiseOutlined />, color: 'blue' },
-      { id: 3, type: 'payment_received', client: 'Acme Corporation', amount: 299, time: '2024-12-10T14:00:00', icon: <DollarOutlined />, color: 'gold' },
-      { id: 4, type: 'support_ticket', client: 'Global Services', time: '2024-12-10T13:15:00', icon: <MailOutlined />, color: 'orange' },
-      { id: 5, type: 'client_created', client: 'Digital Workspace', time: '2024-12-10T12:00:00', icon: <TeamOutlined />, color: 'green' },
-    ])
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch dashboard data from API
+        const response = await api.get('/admin/dashboard')
+        const { stats, recent_bookings, clients } = response.data.data
 
-    // Revenue data for last 6 months
-    setRevenueData([
-      { month: 'Juin', revenue: 45200, bookings: 1200 },
-      { month: 'Juillet', revenue: 48900, bookings: 1350 },
-      { month: 'Août', revenue: 52100, bookings: 1420 },
-      { month: 'Septembre', revenue: 56700, bookings: 1580 },
-      { month: 'Octobre', revenue: 61200, bookings: 1720 },
-      { month: 'Novembre', revenue: 65300, bookings: 1890 },
-    ])
+        // Set clients data
+        if (clients && clients.length > 0) {
+          setClients(clients)
+          // Top clients by revenue
+          setTopClients([...clients].sort((a, b) => b.revenue - a.revenue).slice(0, 5))
+        } else {
+          // Fallback to empty array if no clients
+          setClients([])
+          setTopClients([])
+        }
 
-    // Top clients by revenue
-    setTopClients(clients.sort((a, b) => b.revenue - a.revenue).slice(0, 5))
+        // Recent activity from recent bookings
+        const activity = recent_bookings?.slice(0, 5).map((booking, index) => ({
+          id: booking.id,
+          type: 'booking_created',
+          client: booking.user?.name || 'Utilisateur',
+          resource: booking.resource?.name || 'Ressource',
+          time: booking.created_at,
+          icon: <BookOutlined />,
+          color: 'blue',
+        })) || []
+        setRecentActivity(activity)
 
-    // System health
-    setSystemHealth({
-      uptime: 99.9,
-      responseTime: 120,
-      errorRate: 0.2,
-      activeUsers: 289,
-      apiRequests: 12500,
-    })
+        // Revenue data - simplified from stats
+        // TODO: Fetch actual revenue data from revenue report API
+        setRevenueData([
+          { month: dayjs().subtract(5, 'month').format('MMMM'), revenue: stats.total_bookings * 10, bookings: stats.total_bookings },
+          { month: dayjs().subtract(4, 'month').format('MMMM'), revenue: stats.total_bookings * 12, bookings: stats.total_bookings },
+          { month: dayjs().subtract(3, 'month').format('MMMM'), revenue: stats.total_bookings * 15, bookings: stats.total_bookings },
+          { month: dayjs().subtract(2, 'month').format('MMMM'), revenue: stats.total_bookings * 18, bookings: stats.total_bookings },
+          { month: dayjs().subtract(1, 'month').format('MMMM'), revenue: stats.total_bookings * 20, bookings: stats.total_bookings },
+          { month: dayjs().format('MMMM'), revenue: stats.total_bookings * 25, bookings: stats.today_bookings },
+        ])
+
+        // System health - simplified
+        setSystemHealth({
+          uptime: 99.9,
+          responseTime: 120,
+          errorRate: 0.2,
+          activeUsers: stats.total_users || 0,
+          apiRequests: stats.total_bookings || 0,
+        })
+
+        setLoading(false)
+        console.log('AdminDashboard - Données chargées avec succès', { clientsCount: clients?.length || 0 })
+      } catch (error) {
+      console.error('AdminDashboard - Erreur lors du chargement des données:', error)
+      setLoading(false)
+      // Afficher un message d'erreur à l'utilisateur
+    }
   }, [])
 
   // Calculate platform-wide stats
@@ -306,6 +264,35 @@ const AdminDashboard = () => {
       ),
     },
   ]
+
+  // Debug: Vérifier si le composant se rend
+  console.log('AdminDashboard - Rendu du composant', { 
+    clientsCount: clients.length, 
+    isAuthenticated, 
+    userRole: user?.role 
+  })
+
+  // Si pas authentifié ou pas admin, afficher un message
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert
+          message="Accès refusé"
+          description={
+            <div>
+              <p>Tu dois être connecté en tant qu'administrateur pour accéder à cette page.</p>
+              <p>État actuel : {!isAuthenticated ? 'Non authentifié' : `Rôle: ${user?.role} (requis: admin)`}</p>
+              <Button type="primary" onClick={() => navigate('/login')} style={{ marginTop: 16 }}>
+                Se connecter
+              </Button>
+            </div>
+          }
+          type="warning"
+          showIcon
+        />
+      </div>
+    )
+  }
 
   return (
     <div>

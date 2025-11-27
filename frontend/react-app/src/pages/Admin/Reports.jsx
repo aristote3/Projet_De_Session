@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Typography, Row, Col, Statistic, Table, Tag, Button, Space, DatePicker, Select, Progress, Divider, Tabs } from 'antd'
 import { BookOutlined, AppstoreOutlined, UserOutlined, DollarOutlined, RiseOutlined, DownloadOutlined, BarChartOutlined, TeamOutlined, TrophyOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { RangePicker } = DatePicker
@@ -13,49 +14,62 @@ const Reports = () => {
   const [revenueData, setRevenueData] = useState([])
 
   useEffect(() => {
-    // TODO: Fetch from API
-    setClientUsage([
-      {
-        id: 1,
-        clientName: 'Acme Corporation',
-        totalBookings: 1234,
-        activeUsers: 45,
-        resourcesUsed: 12,
-        revenue: 12500,
-        utilizationRate: 87,
-        growth: 15.5,
-      },
-      {
-        id: 2,
-        clientName: 'TechStart Inc',
-        totalBookings: 856,
-        activeUsers: 23,
-        resourcesUsed: 8,
-        revenue: 7800,
-        utilizationRate: 72,
-        growth: 8.2,
-      },
-      {
-        id: 3,
-        clientName: 'Global Services',
-        totalBookings: 2890,
-        activeUsers: 120,
-        resourcesUsed: 35,
-        revenue: 45000,
-        utilizationRate: 94,
-        growth: 22.3,
-      },
-    ])
+    const fetchReportsData = async () => {
+      try {
+        // Fetch revenue report
+        const revenueResponse = await api.get('/admin/reports/revenue', {
+          params: {
+            start_date: dateRange[0].format('Y-MM-DD'),
+            end_date: dateRange[1].format('Y-MM-DD'),
+          }
+        })
 
-    setRevenueData([
-      { month: 'Juin', revenue: 45200, bookings: 1200, clients: 3 },
-      { month: 'Juillet', revenue: 48900, bookings: 1350, clients: 3 },
-      { month: 'Août', revenue: 52100, bookings: 1420, clients: 4 },
-      { month: 'Septembre', revenue: 56700, bookings: 1580, clients: 4 },
-      { month: 'Octobre', revenue: 61200, bookings: 1720, clients: 5 },
-      { month: 'Novembre', revenue: 65300, bookings: 1890, clients: 5 },
-    ])
-  }, [])
+        // Fetch utilization stats
+        const utilizationResponse = await api.get('/admin/reports/utilization', {
+          params: {
+            start_date: dateRange[0].format('Y-MM-DD'),
+            end_date: dateRange[1].format('Y-MM-DD'),
+          }
+        })
+
+        // Transform utilization data to client usage format
+        const utilizationData = utilizationResponse.data.data || []
+        const clientUsageData = utilizationData.map((item, index) => ({
+          id: item.resource_id || index + 1,
+          clientName: item.resource_name || `Client ${index + 1}`,
+          totalBookings: item.total_bookings || 0,
+          activeUsers: 0, // TODO: Calculate from actual data
+          resourcesUsed: 1,
+          revenue: item.total_hours * 10, // Simplified
+          utilizationRate: item.utilization_percentage || 0,
+          growth: 0, // TODO: Calculate growth
+        }))
+
+        setClientUsage(clientUsageData)
+
+        // Transform revenue data
+        const revenueReport = revenueResponse.data.data || []
+        const monthlyRevenue = revenueReport.reduce((acc, item) => {
+          const month = dayjs(item.date).format('MMMM')
+          if (!acc[month]) {
+            acc[month] = { month, revenue: 0, bookings: 0, clients: 0 }
+          }
+          acc[month].revenue += item.revenue || 0
+          acc[month].bookings += 1
+          return acc
+        }, {})
+
+        setRevenueData(Object.values(monthlyRevenue))
+      } catch (error) {
+        console.error('Erreur lors du chargement des rapports:', error)
+        // Fallback to empty data
+        setClientUsage([])
+        setRevenueData([])
+      }
+    }
+
+    fetchReportsData()
+  }, [dateRange])
 
   const stats = {
     totalBookings: clientUsage.reduce((sum, c) => sum + c.totalBookings, 0),

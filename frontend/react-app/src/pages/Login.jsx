@@ -4,6 +4,7 @@ import { UserOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../store/slices/authSlice'
+import api from '../utils/api'
 
 const { Title, Text } = Typography
 
@@ -36,42 +37,46 @@ const Login = () => {
     setError(null)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      // Appel API réel
+      const response = await api.post('/auth/login', {
+        email: values.email,
+        password: values.password,
+      })
 
-      let userRole = 'user'
-      let userName = 'Utilisateur'
+      const { user, token } = response.data.data
 
-      if (values.email === 'admin@example.com' || values.email === 'admin') {
-        userRole = 'admin'
-        userName = 'Administrateur'
-      } else if (
-        values.email === 'manager@example.com' ||
-        values.email === 'manager' ||
-        values.email === 'gerant'
-      ) {
-        userRole = 'manager'
-        userName = 'Gérant'
-      }
-
+      // Sauvegarder dans Redux
       dispatch(
         login({
-          id: 1,
-          name: userName,
-          email: values.email,
-          role: userRole,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          token: token,
         })
       )
 
       // Rediriger selon le rôle
-      if (userRole === 'admin') {
+      if (user.role === 'admin') {
         navigate('/admin')
-      } else if (userRole === 'manager') {
+      } else if (user.role === 'manager') {
         navigate('/manager')
       } else {
         navigate('/dashboard')
       }
     } catch (err) {
-      setError('Erreur de connexion. Veuillez vérifier vos identifiants.')
+      // Gérer les erreurs de l'API
+      if (err.response?.status === 401) {
+        setError('Identifiants invalides. Veuillez vérifier votre email et mot de passe.')
+      } else if (err.response?.status === 403) {
+        setError('Votre compte est désactivé. Contactez un administrateur.')
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message)
+      } else if (err.message === 'Network Error') {
+        setError('Impossible de se connecter au serveur. Vérifiez que le backend est démarré.')
+      } else {
+        setError('Erreur de connexion. Veuillez réessayer.')
+      }
     } finally {
       setLoading(false)
     }
@@ -298,13 +303,13 @@ const Login = () => {
 
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <Text style={{ fontSize: 12, color: '#94a3b8' }}>
-              <strong>Comptes de démonstration:</strong>
+              <strong>Comptes créés:</strong>
               <br />
-              Admin: admin@example.com / admin
+              Admin: aristotebubala4@gmail.com / admin123
               <br />
-              Gérant: manager@example.com / manager
+              Admin: admin@youmanage.com / admin123
               <br />
-              Utilisateur: user@example.com / user
+              Admin: admin@example.com / password123
             </Text>
           </div>
         </Space>
