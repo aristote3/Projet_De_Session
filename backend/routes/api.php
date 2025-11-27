@@ -100,6 +100,22 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
         Route::post('/business-rules', [\App\Http\Controllers\Api\AdminController::class, 'createBusinessRule']);
         Route::put('/business-rules/{businessRule}', [\App\Http\Controllers\Api\AdminController::class, 'updateBusinessRule']);
         Route::get('/audit-trail', [\App\Http\Controllers\Api\AdminController::class, 'auditTrail']);
+        
+        // Gestion des demandes de comptes en attente
+        Route::get('/pending-requests', [\App\Http\Controllers\Api\UserController::class, 'pendingRequests']);
+        Route::post('/users/{user}/approve', [\App\Http\Controllers\Api\UserController::class, 'approveRequest']);
+        Route::post('/users/{user}/reject', [\App\Http\Controllers\Api\UserController::class, 'rejectRequest']);
+    });
+
+    // Messages & Broadcast
+    Route::prefix('messages')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'index']);
+        Route::get('/sent', [\App\Http\Controllers\Api\MessageController::class, 'sent']);
+        Route::get('/unread-count', [\App\Http\Controllers\Api\MessageController::class, 'unreadCount']);
+        Route::post('/send', [\App\Http\Controllers\Api\MessageController::class, 'send']);
+        Route::post('/broadcast', [\App\Http\Controllers\Api\MessageController::class, 'broadcast']);
+        Route::post('/{message}/read', [\App\Http\Controllers\Api\MessageController::class, 'markAsRead']);
+        Route::delete('/{message}', [\App\Http\Controllers\Api\MessageController::class, 'destroy']);
     });
 });
 

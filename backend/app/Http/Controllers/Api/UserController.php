@@ -259,5 +259,67 @@ class UserController extends Controller
             'data' => $allPermissions->values()
         ]);
     }
+
+    /**
+     * Get pending manager requests
+     */
+    public function pendingRequests()
+    {
+        $pendingUsers = User::with('organization')
+            ->where('status', 'pending')
+            ->where('role', 'manager')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'data' => $pendingUsers,
+            'count' => $pendingUsers->count()
+        ]);
+    }
+
+    /**
+     * Approve a pending user request
+     */
+    public function approveRequest(User $user)
+    {
+        if ($user->status !== 'pending') {
+            return response()->json([
+                'message' => 'Cet utilisateur n\'est pas en attente d\'approbation'
+            ], 400);
+        }
+
+        $user->update(['status' => 'active']);
+
+        // TODO: Envoyer un email de notification à l'utilisateur
+
+        return response()->json([
+            'data' => $user,
+            'message' => 'Compte approuvé avec succès. L\'utilisateur peut maintenant se connecter.'
+        ]);
+    }
+
+    /**
+     * Reject a pending user request
+     */
+    public function rejectRequest(Request $request, User $user)
+    {
+        if ($user->status !== 'pending') {
+            return response()->json([
+                'message' => 'Cet utilisateur n\'est pas en attente d\'approbation'
+            ], 400);
+        }
+
+        $reason = $request->get('reason', 'Demande refusée par l\'administrateur');
+
+        // On peut soit supprimer l'utilisateur, soit le marquer comme rejeté
+        $user->update(['status' => 'rejected']);
+
+        // TODO: Envoyer un email de notification avec la raison du refus
+
+        return response()->json([
+            'data' => $user,
+            'message' => 'Demande refusée.'
+        ]);
+    }
 }
 

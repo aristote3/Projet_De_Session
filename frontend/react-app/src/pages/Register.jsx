@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd'
-import { UserOutlined, LockOutlined, MailOutlined, UserAddOutlined } from '@ant-design/icons'
+import { Form, Input, Button, Card, Typography, Alert, Space, Select, Tooltip, Divider } from 'antd'
+import { UserOutlined, LockOutlined, MailOutlined, UserAddOutlined, TeamOutlined, InfoCircleOutlined, BankOutlined, PhoneOutlined, AppstoreOutlined, FileTextOutlined, UsergroupAddOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 
 const { Title, Text } = Typography
+const { Option } = Select
 
 const Register = () => {
   const [loading, setLoading] = useState(false)
@@ -20,25 +21,45 @@ const Register = () => {
     navigate('/login')
   }
 
+  const [accountType, setAccountType] = useState('user')
+
   const onFinish = async (values) => {
     setLoading(true)
     setError(null)
 
     try {
-      // Appel API réel
-      const response = await api.post('/auth/register', {
+      // Préparer les données
+      const registerData = {
         name: values.name,
         email: values.email,
         password: values.password,
         password_confirmation: values.confirmPassword,
-      })
+        role: values.accountType || 'user',
+      }
 
-      setSuccess(true)
+      // Ajouter les champs manager si nécessaire
+      if (values.accountType === 'manager') {
+        registerData.company_name = values.company_name
+        registerData.phone = values.phone
+        registerData.industry = values.industry
+        registerData.company_size = values.company_size
+        registerData.description = values.description
+      }
+
+      // Appel API réel
+      const response = await api.post('/auth/register', registerData)
+
+      // Message différent selon le type de compte
+      if (values.accountType === 'manager') {
+        setSuccess('manager')
+      } else {
+        setSuccess('user')
+      }
       
-      // Rediriger vers la page de connexion après 2 secondes
+      // Rediriger vers la page de connexion après 3 secondes
       setTimeout(() => {
         navigate('/login')
-      }, 2000)
+      }, 3000)
     } catch (err) {
       // Gérer les erreurs de l'API
       if (err.response?.status === 422) {
@@ -190,10 +211,10 @@ const Register = () => {
             />
           )}
 
-          {success && (
+          {success === 'user' && (
             <Alert
               message="Inscription réussie !"
-              description="Redirection vers la page de connexion..."
+              description="Votre compte a été créé. Redirection vers la connexion..."
               type="success"
               showIcon
               style={{
@@ -203,7 +224,166 @@ const Register = () => {
             />
           )}
 
-          <Form name="register" onFinish={onFinish} autoComplete="off" size="large">
+          {success === 'manager' && (
+            <Alert
+              message="Demande envoyée !"
+              description="Votre demande de compte Manager a été soumise. Un administrateur validera votre compte sous peu. Vous recevrez une notification par email."
+              type="info"
+              showIcon
+              style={{
+                background: 'rgba(0,150,255,0.1)',
+                borderColor: 'rgba(0,150,255,0.2)',
+              }}
+            />
+          )}
+
+          <Form name="register" onFinish={onFinish} autoComplete="off" size="large" initialValues={{ accountType: 'user' }}>
+            <Form.Item
+              name="accountType"
+              label={
+                <span style={{ color: '#cbd5e1' }}>
+                  Type de compte{' '}
+                  <Tooltip title="Les comptes Manager nécessitent une validation par un administrateur">
+                    <InfoCircleOutlined style={{ color: '#60a5fa' }} />
+                  </Tooltip>
+                </span>
+              }
+            >
+              <Select
+                onChange={(value) => setAccountType(value)}
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                }}
+                dropdownStyle={{
+                  background: '#1e293b',
+                }}
+              >
+                <Option value="user">
+                  <Space>
+                    <UserOutlined />
+                    Utilisateur - Accès aux réservations
+                  </Space>
+                </Option>
+                <Option value="manager">
+                  <Space>
+                    <TeamOutlined />
+                    Manager - Gérer une organisation (validation requise)
+                  </Space>
+                </Option>
+              </Select>
+            </Form.Item>
+
+            {accountType === 'manager' && (
+              <>
+                <Alert
+                  message="Compte Manager"
+                  description="Votre demande sera examinée par un administrateur. Vous recevrez un email de confirmation une fois approuvé."
+                  type="info"
+                  showIcon
+                  style={{
+                    marginBottom: 16,
+                    background: 'rgba(0,150,255,0.1)',
+                    borderColor: 'rgba(0,150,255,0.2)',
+                  }}
+                />
+
+                <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0 16px' }}>
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>Informations de l'organisation</span>
+                </Divider>
+
+                <Form.Item
+                  name="company_name"
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Veuillez entrer le nom de votre entreprise!',
+                    },
+                  ]}
+                >
+                  <Input
+                    prefix={<BankOutlined style={{ color: '#60a5fa' }} />}
+                    placeholder="Nom de l'entreprise / Organisation *"
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#ffffff',
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item name="phone">
+                  <Input
+                    prefix={<PhoneOutlined style={{ color: '#60a5fa' }} />}
+                    placeholder="Téléphone de contact"
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#ffffff',
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item name="industry">
+                  <Select
+                    placeholder="Secteur d'activité"
+                    allowClear
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                    }}
+                    dropdownStyle={{
+                      background: '#1e293b',
+                    }}
+                  >
+                    <Option value="technology">🖥️ Technologie / IT</Option>
+                    <Option value="healthcare">🏥 Santé</Option>
+                    <Option value="education">🎓 Éducation</Option>
+                    <Option value="finance">💰 Finance / Banque</Option>
+                    <Option value="retail">🛒 Commerce / Retail</Option>
+                    <Option value="manufacturing">🏭 Industrie / Fabrication</Option>
+                    <Option value="services">💼 Services professionnels</Option>
+                    <Option value="government">🏛️ Gouvernement / Public</Option>
+                    <Option value="nonprofit">❤️ Association / ONG</Option>
+                    <Option value="other">📋 Autre</Option>
+                  </Select>
+                </Form.Item>
+
+                <Form.Item name="company_size">
+                  <Select
+                    placeholder="Taille de l'entreprise"
+                    allowClear
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                    }}
+                    dropdownStyle={{
+                      background: '#1e293b',
+                    }}
+                  >
+                    <Option value="1-10">👤 1-10 employés</Option>
+                    <Option value="11-50">👥 11-50 employés</Option>
+                    <Option value="51-200">🏢 51-200 employés</Option>
+                    <Option value="201-500">🏬 201-500 employés</Option>
+                    <Option value="500+">🏙️ 500+ employés</Option>
+                  </Select>
+                </Form.Item>
+
+                <Form.Item name="description">
+                  <Input.TextArea
+                    placeholder="Décrivez brièvement votre projet ou votre utilisation prévue de YouManage..."
+                    rows={3}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)',
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#ffffff',
+                    }}
+                  />
+                </Form.Item>
+
+                <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0 16px' }}>
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>Informations personnelles</span>
+                </Divider>
+              </>
+            )}
+
             <Form.Item
               name="name"
               rules={[

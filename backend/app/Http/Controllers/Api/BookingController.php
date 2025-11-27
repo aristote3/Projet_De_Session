@@ -106,10 +106,17 @@ class BookingController extends Controller
         // Calculate duration
         $start = \Carbon\Carbon::parse($request->date . ' ' . $request->start_time);
         $end = \Carbon\Carbon::parse($request->date . ' ' . $request->end_time);
-        $duration = $start->diffInHours($end);
+        $duration = $start->diffInMinutes($end) / 60; // Durée en heures avec décimales
+
+        // Vérifier que l'utilisateur est authentifié
+        if (!auth()->check()) {
+            return response()->json([
+                'message' => 'Vous devez être connecté pour créer une réservation'
+            ], 401);
+        }
 
         $bookingData = $validator->validated();
-        $bookingData['user_id'] = auth()->id() ?? 1; // TODO: Use actual auth
+        $bookingData['user_id'] = auth()->id();
         $bookingData['duration'] = $duration;
         $bookingData['status'] = 'pending';
 

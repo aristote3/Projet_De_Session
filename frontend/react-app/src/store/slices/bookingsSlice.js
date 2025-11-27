@@ -1,12 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import axios from 'axios'
-
-const API_URL = '/api'
+import api from '../../utils/api'
 
 export const fetchBookings = createAsyncThunk(
   'bookings/fetchBookings',
   async (params = {}) => {
-    const response = await axios.get(`${API_URL}/bookings`, { params })
+    const response = await api.get('/bookings', { params })
     return response.data
   }
 )
@@ -14,7 +12,7 @@ export const fetchBookings = createAsyncThunk(
 export const createBooking = createAsyncThunk(
   'bookings/createBooking',
   async (bookingData) => {
-    const response = await axios.post(`${API_URL}/bookings`, bookingData)
+    const response = await api.post('/bookings', bookingData)
     return response.data
   }
 )
@@ -22,7 +20,7 @@ export const createBooking = createAsyncThunk(
 export const updateBooking = createAsyncThunk(
   'bookings/updateBooking',
   async ({ id, data }) => {
-    const response = await axios.put(`${API_URL}/bookings/${id}`, data)
+    const response = await api.put(`/bookings/${id}`, data)
     return response.data
   }
 )
@@ -30,7 +28,7 @@ export const updateBooking = createAsyncThunk(
 export const cancelBooking = createAsyncThunk(
   'bookings/cancelBooking',
   async (id) => {
-    const response = await axios.delete(`${API_URL}/bookings/${id}`)
+    const response = await api.delete(`/bookings/${id}`)
     return response.data
   }
 )
@@ -38,7 +36,15 @@ export const cancelBooking = createAsyncThunk(
 export const approveBooking = createAsyncThunk(
   'bookings/approveBooking',
   async (id) => {
-    const response = await axios.post(`${API_URL}/bookings/${id}/approve`)
+    const response = await api.post(`/bookings/${id}/approve`)
+    return response.data
+  }
+)
+
+export const rejectBooking = createAsyncThunk(
+  'bookings/rejectBooking',
+  async (id) => {
+    const response = await api.post(`/bookings/${id}/reject`)
     return response.data
   }
 )
@@ -66,24 +72,35 @@ const bookingsSlice = createSlice({
         state.error = action.error.message
       })
       .addCase(createBooking.fulfilled, (state, action) => {
-        state.items.push(action.payload)
+        const booking = action.payload.data || action.payload
+        state.items.push(booking)
       })
       .addCase(updateBooking.fulfilled, (state, action) => {
-        const index = state.items.findIndex(item => item.id === action.payload.id)
+        const booking = action.payload.data || action.payload
+        const index = state.items.findIndex(item => item.id === booking.id)
         if (index !== -1) {
-          state.items[index] = action.payload
+          state.items[index] = booking
         }
       })
       .addCase(cancelBooking.fulfilled, (state, action) => {
-        const index = state.items.findIndex(item => item.id === action.payload.id)
+        const booking = action.payload.data || action.payload
+        const index = state.items.findIndex(item => item.id === booking.id)
         if (index !== -1) {
-          state.items[index] = action.payload
+          state.items[index] = booking
         }
       })
       .addCase(approveBooking.fulfilled, (state, action) => {
-        const index = state.items.findIndex(item => item.id === action.payload.id)
+        const booking = action.payload.data || action.payload
+        const index = state.items.findIndex(item => item.id === booking.id)
         if (index !== -1) {
-          state.items[index] = action.payload
+          state.items[index] = booking
+        }
+      })
+      .addCase(rejectBooking.fulfilled, (state, action) => {
+        const booking = action.payload.data || action.payload
+        const index = state.items.findIndex(item => item.id === booking.id)
+        if (index !== -1) {
+          state.items[index] = booking
         }
       })
   },

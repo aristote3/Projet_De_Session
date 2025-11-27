@@ -20,6 +20,8 @@ import {
   ArrowRightOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons'
+import { useTheme } from '../contexts/ThemeContext'
+import ThemeToggle from '../components/ThemeToggle'
 
 const { Title, Paragraph, Text } = Typography
 const { Panel } = Collapse
@@ -27,6 +29,7 @@ const { Panel } = Collapse
 const Home = () => {
   const navigate = useNavigate()
   const [menuVisible, setMenuVisible] = useState(false)
+  const { isDarkMode, theme } = useTheme()
 
   const products = [
     {
@@ -130,48 +133,64 @@ const Home = () => {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff' }}>
+    <div style={{ minHeight: '100vh', background: isDarkMode ? '#020617' : '#fff', transition: 'background 0.3s ease' }}>
       {/* Header */}
       <header
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 1000,
-          background: '#fff',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          background: isDarkMode ? '#0f172a' : '#fff',
+          boxShadow: isDarkMode ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
           padding: '0 24px',
+          borderBottom: isDarkMode ? '1px solid #334155' : 'none',
+          transition: 'all 0.3s ease',
         }}
       >
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 70 }}>
-          <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff', cursor: 'pointer' }} onClick={() => navigate('/home')}>
-            YouManage
+          <div 
+            style={{ 
+              fontSize: 24, 
+              fontWeight: 'bold', 
+              color: isDarkMode ? '#38bdf8' : '#1890ff', 
+              cursor: 'pointer',
+              textShadow: isDarkMode ? '0 0 10px rgba(56, 189, 248, 0.5)' : 'none',
+            }} 
+            onClick={() => navigate('/home')}
+          >
+            ✨ YouManage
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'nowrap' }}>
             <Space size="large" style={{ display: 'flex', alignItems: 'center' }}>
               <a 
                 href="#" 
                 onClick={(e) => { e.preventDefault(); navigate('/home'); }}
-                style={{ color: '#000', textDecoration: 'none', fontSize: 16, fontWeight: 500 }}
+                style={{ color: isDarkMode ? '#e2e8f0' : '#000', textDecoration: 'none', fontSize: 16, fontWeight: 500 }}
               >
                 Accueil
               </a>
               <a 
                 href="#" 
-                onClick={(e) => { e.preventDefault(); }}
-                style={{ color: '#000', textDecoration: 'none', fontSize: 16, fontWeight: 500 }}
+                onClick={(e) => { e.preventDefault(); navigate('/pricing'); }}
+                style={{ color: isDarkMode ? '#e2e8f0' : '#000', textDecoration: 'none', fontSize: 16, fontWeight: 500 }}
               >
                 Tarifs
               </a>
               <a 
                 href="#" 
-                onClick={(e) => { e.preventDefault(); }}
-                style={{ color: '#000', textDecoration: 'none', fontSize: 16, fontWeight: 500 }}
+                onClick={(e) => { e.preventDefault(); navigate('/news'); }}
+                style={{ color: isDarkMode ? '#e2e8f0' : '#000', textDecoration: 'none', fontSize: 16, fontWeight: 500 }}
               >
                 Actualités
               </a>
             </Space>
             <Space style={{ flexShrink: 0 }}>
-              <Button type="text" onClick={() => navigate('/login')}>
+              <ThemeToggle />
+              <Button 
+                type="text" 
+                onClick={() => navigate('/login')}
+                style={{ color: isDarkMode ? '#e2e8f0' : undefined }}
+              >
                 Se connecter
               </Button>
               <Button type="primary" onClick={() => navigate('/register')}>
@@ -211,7 +230,7 @@ const Home = () => {
       </section>
 
       {/* Products Section */}
-      <section style={{ padding: '80px 20px', background: '#f5f5f5' }}>
+      <section style={{ padding: '80px 20px', background: isDarkMode ? '#0f172a' : '#f5f5f5', transition: 'background 0.3s ease' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <Row gutter={[24, 24]}>
             {products.map((product, index) => (
@@ -287,15 +306,15 @@ const Home = () => {
       </section>
 
       {/* Features Section 1 */}
-      <section style={{ padding: '80px 20px' }}>
+      <section style={{ padding: '80px 20px', background: isDarkMode ? '#020617' : '#fff', transition: 'background 0.3s ease' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <Row gutter={[48, 48]} align="middle">
             <Col xs={24} lg={12}>
-              <Title level={2}>Gérez tous vos types de ressources</Title>
-              <Paragraph style={{ fontSize: 16, marginBottom: 24 }}>
+              <Title level={2} style={{ color: isDarkMode ? '#e2e8f0' : undefined }}>Gérez tous vos types de ressources</Title>
+              <Paragraph style={{ fontSize: 16, marginBottom: 24, color: isDarkMode ? '#94a3b8' : undefined }}>
                 Que vous gériez des salles de réunion, des équipements techniques, des véhicules de service, des espaces de coworking, des laboratoires, des studios, des terrains de sport, ou tout autre type de ressource, YouManage s'adapte à vos besoins. Centralisez la gestion de vos espaces physiques, matériels, services et créneaux horaires.
               </Paragraph>
-              <Paragraph style={{ fontSize: 16, marginBottom: 24 }}>
+              <Paragraph style={{ fontSize: 16, marginBottom: 24, color: isDarkMode ? '#94a3b8' : undefined }}>
                 Optimisez l'utilisation de vos ressources avec des outils intelligents : vérification automatique de disponibilité, gestion des conflits, listes d'attente, approbations multi-niveaux, et rapports détaillés d'utilisation avec YouManage.
               </Paragraph>
               <Button type="link" size="large" onClick={() => navigate('/login')}>
@@ -349,7 +368,7 @@ const Home = () => {
       </section>
 
       {/* Features Section 2 */}
-      <section style={{ padding: '80px 20px', background: '#f5f5f5' }}>
+      <section style={{ padding: '80px 20px', background: isDarkMode ? '#0f172a' : '#f5f5f5', transition: 'background 0.3s ease' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <Row gutter={[48, 48]} align="middle">
             <Col xs={24} lg={12} order={2} order-lg={1}>
@@ -395,11 +414,11 @@ const Home = () => {
               </div>
             </Col>
             <Col xs={24} lg={12} order={1} order-lg={2}>
-              <Title level={2}>Suivez toutes vos réservations en temps réel</Title>
-              <Paragraph style={{ fontSize: 16, marginBottom: 24 }}>
+              <Title level={2} style={{ color: isDarkMode ? '#e2e8f0' : undefined }}>Suivez toutes vos réservations en temps réel</Title>
+              <Paragraph style={{ fontSize: 16, marginBottom: 24, color: isDarkMode ? '#94a3b8' : undefined }}>
                 Visualisez en un coup d'œil l'état de toutes vos ressources : quelles salles sont occupées, quels équipements sont disponibles, quels véhicules sont en service, quels créneaux sont libres. Votre tableau de bord se met à jour automatiquement à chaque réservation, annulation ou modification.
               </Paragraph>
-              <Paragraph style={{ fontSize: 16, marginBottom: 24 }}>
+              <Paragraph style={{ fontSize: 16, marginBottom: 24, color: isDarkMode ? '#94a3b8' : undefined }}>
                 Gérez les réservations de multiples façons : en ligne 24/7, par téléphone, en personne, ou via l'application mobile. Le système gère automatiquement les conflits, les chevauchements et les disponibilités selon vos règles métier personnalisées.
               </Paragraph>
               <Button type="link" size="large" onClick={() => navigate('/login')}>
@@ -411,7 +430,7 @@ const Home = () => {
       </section>
 
       {/* Pricing Section */}
-      <section style={{ padding: '80px 20px' }}>
+      <section style={{ padding: '80px 20px', background: isDarkMode ? '#020617' : '#fff', transition: 'background 0.3s ease' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div
             style={{
@@ -497,20 +516,26 @@ const Home = () => {
       </section>
 
       {/* Expand Business Section */}
-      <section style={{ padding: '80px 20px', background: '#f5f5f5' }}>
+      <section style={{ padding: '80px 20px', background: isDarkMode ? '#0f172a' : '#f5f5f5', transition: 'background 0.3s ease' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', textAlign: 'center' }}>
-          <Title level={2}>Adaptez YouManage à votre organisation</Title>
-          <Paragraph style={{ fontSize: 16, marginBottom: 60 }}>
+          <Title level={2} style={{ color: isDarkMode ? '#e2e8f0' : undefined }}>Adaptez YouManage à votre organisation</Title>
+          <Paragraph style={{ fontSize: 16, marginBottom: 60, color: isDarkMode ? '#94a3b8' : undefined }}>
             Que vous soyez une entreprise, une école, un hôpital, une collectivité, une association ou toute autre organisation, YouManage s'adapte à votre contexte. Configurez vos ressources, définissez vos règles d'utilisation, gérez les permissions et automatisez vos processus de réservation.
           </Paragraph>
           <Row gutter={[24, 24]}>
             {features.map((feature, index) => (
               <Col xs={24} md={8} key={index}>
-                <Card style={{ height: '100%', textAlign: 'center', borderRadius: 8 }}>
+                <Card style={{ 
+                  height: '100%', 
+                  textAlign: 'center', 
+                  borderRadius: 8,
+                  background: isDarkMode ? '#1e293b' : '#fff',
+                  borderColor: isDarkMode ? '#334155' : undefined,
+                }}>
                   <Space direction="vertical" size="large" style={{ width: '100%' }}>
                     {feature.icon}
-                    <Title level={4}>{feature.title}</Title>
-                    <Paragraph type="secondary">{feature.description}</Paragraph>
+                    <Title level={4} style={{ color: isDarkMode ? '#e2e8f0' : undefined }}>{feature.title}</Title>
+                    <Paragraph style={{ color: isDarkMode ? '#94a3b8' : undefined }}>{feature.description}</Paragraph>
                     <Button type="link">En savoir plus →</Button>
                   </Space>
                 </Card>
@@ -521,22 +546,27 @@ const Home = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section style={{ padding: '80px 20px' }}>
+      <section style={{ padding: '80px 20px', background: isDarkMode ? '#020617' : '#fff', transition: 'background 0.3s ease' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 60 }}>
-            <Title level={2}>Témoignages de nos utilisateurs</Title>
-            <Paragraph style={{ fontSize: 16 }}>
+            <Title level={2} style={{ color: isDarkMode ? '#e2e8f0' : undefined }}>Témoignages de nos utilisateurs</Title>
+            <Paragraph style={{ fontSize: 16, color: isDarkMode ? '#94a3b8' : undefined }}>
               Des organisations de tous secteurs font confiance à YouManage pour gérer leurs ressources efficacement.
             </Paragraph>
           </div>
           <Carousel autoplay>
             {testimonials.map((testimonial, index) => (
               <div key={index}>
-                <Card style={{ textAlign: 'center', padding: 40 }}>
-                  <Paragraph style={{ fontSize: 18, fontStyle: 'italic', marginBottom: 24 }}>
+                <Card style={{ 
+                  textAlign: 'center', 
+                  padding: 40,
+                  background: isDarkMode ? '#1e293b' : '#fff',
+                  borderColor: isDarkMode ? '#334155' : undefined,
+                }}>
+                  <Paragraph style={{ fontSize: 18, fontStyle: 'italic', marginBottom: 24, color: isDarkMode ? '#e2e8f0' : undefined }}>
                     "{testimonial.text}"
                   </Paragraph>
-                  <Text strong>{testimonial.author}</Text>
+                  <Text strong style={{ color: isDarkMode ? '#38bdf8' : undefined }}>{testimonial.author}</Text>
                 </Card>
               </div>
             ))}
@@ -571,15 +601,18 @@ const Home = () => {
       </section>
 
       {/* FAQ Section */}
-      <section style={{ padding: '80px 20px', background: '#f5f5f5' }}>
+      <section style={{ padding: '80px 20px', background: isDarkMode ? '#0f172a' : '#f5f5f5', transition: 'background 0.3s ease' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
-          <Title level={2} style={{ textAlign: 'center', marginBottom: 40 }}>
+          <Title level={2} style={{ textAlign: 'center', marginBottom: 40, color: isDarkMode ? '#e2e8f0' : undefined }}>
             FAQ
           </Title>
           <Collapse
             items={faqItems}
-            style={{ background: '#fff' }}
-            expandIcon={({ isActive }) => <RightOutlined rotate={isActive ? 90 : 0} />}
+            style={{ 
+              background: isDarkMode ? '#1e293b' : '#fff',
+              borderColor: isDarkMode ? '#334155' : undefined,
+            }}
+            expandIcon={({ isActive }) => <RightOutlined rotate={isActive ? 90 : 0} style={{ color: isDarkMode ? '#94a3b8' : undefined }} />}
           />
         </div>
       </section>
@@ -587,9 +620,11 @@ const Home = () => {
       {/* Footer */}
       <footer
         style={{
-          background: '#001529',
+          background: isDarkMode ? '#020617' : '#001529',
           color: 'rgba(255,255,255,0.65)',
           padding: '60px 20px 20px',
+          borderTop: isDarkMode ? '1px solid #334155' : 'none',
+          transition: 'background 0.3s ease',
         }}
       >
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>

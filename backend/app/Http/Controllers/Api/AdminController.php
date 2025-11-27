@@ -229,10 +229,17 @@ class AdminController extends Controller
             ], 422);
         }
 
+        // Vérifier que l'utilisateur est authentifié
+        if (!auth()->check()) {
+            return response()->json([
+                'message' => 'Vous devez être connecté pour résoudre un conflit'
+            ], 401);
+        }
+
         $conflict->update([
             'resolution_type' => $request->resolution_type,
             'resolution_notes' => $request->resolution_notes,
-            'resolved_by' => auth()->id() ?? 1, // TODO: Use actual auth
+            'resolved_by' => auth()->id(),
             'status' => 'resolved',
             'resolved_at' => now(),
         ]);

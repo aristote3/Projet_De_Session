@@ -6,6 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchBookings } from '../store/slices/bookingsSlice'
+import { fetchResources } from '../store/slices/resourcesSlice'
 import BookingForm from '../components/Bookings/BookingForm'
 import dayjs from 'dayjs'
 
@@ -21,19 +22,31 @@ const CalendarView = () => {
 
   useEffect(() => {
     dispatch(fetchBookings())
+    dispatch(fetchResources())
   }, [dispatch])
 
-  const events = bookings.map(booking => ({
-    id: booking.id,
-    title: `${booking.resource?.name || 'Ressource'} - ${booking.user?.name || 'Utilisateur'}`,
-    start: booking.start_time,
-    end: booking.end_time,
-    backgroundColor: booking.status === 'approved' ? '#52c41a' : 
-                     booking.status === 'pending' ? '#faad14' : '#ff4d4f',
-    borderColor: booking.status === 'approved' ? '#52c41a' : 
-                 booking.status === 'pending' ? '#faad14' : '#ff4d4f',
-    extendedProps: booking,
-  }))
+  // Combiner date + start_time/end_time pour créer des dates ISO complètes pour FullCalendar
+  const events = bookings.map(booking => {
+    // Format: date = "2024-01-15", start_time = "10:00", end_time = "12:00"
+    const startDateTime = booking.date && booking.start_time 
+      ? `${booking.date}T${booking.start_time}:00` 
+      : booking.start_time
+    const endDateTime = booking.date && booking.end_time 
+      ? `${booking.date}T${booking.end_time}:00` 
+      : booking.end_time
+
+    return {
+      id: booking.id,
+      title: `${booking.resource?.name || 'Ressource'} - ${booking.user?.name || 'Utilisateur'}`,
+      start: startDateTime,
+      end: endDateTime,
+      backgroundColor: booking.status === 'approved' ? '#52c41a' : 
+                       booking.status === 'pending' ? '#faad14' : '#ff4d4f',
+      borderColor: booking.status === 'approved' ? '#52c41a' : 
+                   booking.status === 'pending' ? '#faad14' : '#ff4d4f',
+      extendedProps: booking,
+    }
+  })
 
   const handleDateClick = (arg) => {
     setSelectedDate(arg.dateStr)

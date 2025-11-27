@@ -2,6 +2,7 @@ import React from 'react'
 import { Layout, Menu } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { useTheme } from '../../contexts/ThemeContext'
 import {
   DashboardOutlined,
   CalendarOutlined,
@@ -18,6 +19,10 @@ import {
   ThunderboltOutlined,
   GlobalOutlined,
   RocketOutlined,
+  ClockCircleOutlined,
+  MessageOutlined,
+  SoundOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons'
 
 const { Sider } = Layout
@@ -26,6 +31,7 @@ const AppSider = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useSelector((state) => state.auth)
+  const { isDarkMode, theme } = useTheme()
   const isAdmin = user?.role === 'admin'
   const isManager = user?.role === 'manager'
 
@@ -46,9 +52,19 @@ const AppSider = ({ collapsed, setCollapsed }) => {
       label: 'Ressources',
     },
     {
+      key: '/floor-plan',
+      icon: <EnvironmentOutlined />,
+      label: 'Plan interactif',
+    },
+    {
       key: '/bookings',
       icon: <BookOutlined />,
       label: user?.role === 'user' ? 'Mes réservations' : 'Réservations',
+    },
+    {
+      key: '/messages',
+      icon: <MessageOutlined />,
+      label: 'Messages',
     },
     // Menu spécifique User
     ...(user?.role === 'user'
@@ -90,6 +106,11 @@ const AppSider = ({ collapsed, setCollapsed }) => {
             key: '/admin/users',
             icon: <UserOutlined />,
             label: 'Utilisateurs système',
+          },
+          {
+            key: '/admin/pending-requests',
+            icon: <ClockCircleOutlined />,
+            label: 'Demandes en attente',
           },
           {
             key: '/admin/reports',
@@ -160,6 +181,11 @@ const AppSider = ({ collapsed, setCollapsed }) => {
             label: 'Paramètres',
           },
           {
+            key: '/manager/broadcast',
+            icon: <SoundOutlined />,
+            label: 'Diffusion messages',
+          },
+          {
             key: '/manager/support',
             icon: <CustomerServiceOutlined />,
             label: 'Support',
@@ -173,7 +199,7 @@ const AppSider = ({ collapsed, setCollapsed }) => {
       collapsible
       collapsed={collapsed}
       onCollapse={setCollapsed}
-      theme="light"
+      theme={isDarkMode ? 'dark' : 'light'}
       width={250}
       style={{
         overflow: 'auto',
@@ -182,40 +208,50 @@ const AppSider = ({ collapsed, setCollapsed }) => {
         left: 0,
         top: 0,
         bottom: 0,
+        background: isDarkMode ? '#0f172a' : '#ffffff',
+        borderRight: `1px solid ${isDarkMode ? '#334155' : '#f0f0f0'}`,
+        transition: 'all 0.3s ease',
       }}
     >
       <div
         style={{
           height: 64,
           margin: 16,
-          background: 'rgba(24, 144, 255, 0.1)',
-          borderRadius: 8,
+          background: isDarkMode ? 'rgba(56, 189, 248, 0.15)' : 'rgba(24, 144, 255, 0.1)',
+          borderRadius: 12,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontWeight: 'bold',
-          color: '#1890ff',
+          fontSize: collapsed ? 14 : 18,
+          color: isDarkMode ? '#38bdf8' : '#1890ff',
           cursor: 'pointer',
-          transition: 'all 0.3s',
+          transition: 'all 0.3s ease',
+          border: `1px solid ${isDarkMode ? 'rgba(56, 189, 248, 0.3)' : 'rgba(24, 144, 255, 0.2)'}`,
+          textShadow: isDarkMode ? '0 0 10px rgba(56, 189, 248, 0.5)' : 'none',
         }}
         onClick={() => navigate('/home')}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(24, 144, 255, 0.2)'
+          e.currentTarget.style.background = isDarkMode ? 'rgba(56, 189, 248, 0.25)' : 'rgba(24, 144, 255, 0.2)'
           e.currentTarget.style.transform = 'scale(1.02)'
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(24, 144, 255, 0.1)'
+          e.currentTarget.style.background = isDarkMode ? 'rgba(56, 189, 248, 0.15)' : 'rgba(24, 144, 255, 0.1)'
           e.currentTarget.style.transform = 'scale(1)'
         }}
       >
-        {!collapsed && 'YouManage'}
+        {!collapsed ? '✨ YouManage' : '✨'}
       </div>
       <Menu
         mode="inline"
+        theme={isDarkMode ? 'dark' : 'light'}
         selectedKeys={[location.pathname]}
         items={menuItems}
         onClick={({ key }) => navigate(key)}
-        style={{ borderRight: 0 }}
+        style={{ 
+          borderRight: 0,
+          background: 'transparent',
+        }}
       />
     </Sider>
   )

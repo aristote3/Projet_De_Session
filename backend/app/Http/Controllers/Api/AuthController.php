@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -37,6 +38,12 @@ class AuthController extends Controller
         }
 
         // Vérifier que l'utilisateur est actif
+        if ($user->status === 'pending') {
+            return response()->json([
+                'message' => 'Votre compte est en attente de validation par un administrateur'
+            ], 403);
+        }
+        
         if ($user->status !== 'active') {
             return response()->json([
                 'message' => 'Votre compte est désactivé'
@@ -65,12 +72,26 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $requestedRole = $request->role ?? 'user';
+        
+        // Règles de validation de base
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
             'role' => 'nullable|in:admin,manager,user',
-        ]);
+        ];
+
+        // Règles supplémentaires pour les managers
+        if ($requestedRole === 'manager') {
+            $rules['company_name'] = 'required|string|max:255';
+            $rules['phone'] = 'nullable|string|max:20';
+            $rules['industry'] = 'nullable|string|max:100';
+            $rules['company_size'] = 'nullable|string|max:50';
+            $rules['description'] = 'nullable|string|max:1000';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -78,14 +99,50 @@ class AuthController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
+        
+        // Les managers doivent être approuvés par un admin
+        // Les admins ne peuvent pas s'auto-créer via l'inscription publique
+        if ($requestedRole === 'admin') {
+            $requestedRole = 'user'; // Forcer le rôle user pour sécurité
+        }
+        
+        $status = ($requestedRole === 'manager') ? 'pending' : 'active';
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role ?? 'user',
-            'status' => 'active',
+            'role' => $requestedRole,
+            'status' => $status,
         ]);
+
+        // Si c'est un manager, créer aussi l'organisation
+        if ($requestedRole === 'manager') {
+            Organization::create([
+                'user_id' => $user->id,
+                'company_name' => $request->company_name,
+                'phone' => $request->phone,
+                'industry' => $request->industry,
+                'company_size' => $request->company_size,
+                'description' => $request->description,
+            ]);
+        }
+
+        // Pour les managers en attente, ne pas créer de token (ils ne peuvent pas se connecter)
+        if ($status === 'pending') {
+            return response()->json([
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'status' => $user->status,
+                    ],
+                ],
+                'message' => 'Demande de compte Manager soumise. Un administrateur validera votre compte.'
+            ], 201);
+        }
 
         $token = $user->createToken('auth-token')->plainTextToken;
 

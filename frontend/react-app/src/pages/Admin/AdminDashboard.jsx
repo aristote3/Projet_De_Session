@@ -23,7 +23,13 @@ import {
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/fr'
 import api from '../../utils/api'
+
+// Activer le plugin relativeTime et la locale française
+dayjs.extend(relativeTime)
+dayjs.locale('fr')
 
 const { Title, Text } = Typography
 
@@ -35,14 +41,18 @@ const AdminDashboard = () => {
   const [recentActivity, setRecentActivity] = useState([])
   const [revenueData, setRevenueData] = useState([])
   const [topClients, setTopClients] = useState([])
-  const [systemHealth, setSystemHealth] = useState({})
+  const [systemHealth, setSystemHealth] = useState({
+    uptime: 0,
+    responseTime: 0,
+    errorRate: 0,
+    activeUsers: 0,
+    apiRequests: 0,
+  })
+  const [pendingRequests, setPendingRequests] = useState([])
 
-  // Debug: Vérifier l'authentification
+  // Vérifier l'authentification
   useEffect(() => {
-    console.log('AdminDashboard - Auth state:', { isAuthenticated, userRole: user?.role })
-    if (!isAuthenticated || user?.role !== 'admin') {
-      console.warn('AdminDashboard - Accès refusé:', { isAuthenticated, role: user?.role })
-    }
+    // Redirection gérée par ProtectedRoute
   }, [isAuthenticated, user])
 
   useEffect(() => {
@@ -66,7 +76,7 @@ const AdminDashboard = () => {
         }
 
         // Recent activity from recent bookings
-        const activity = recent_bookings?.slice(0, 5).map((booking, index) => ({
+        const activity = recent_bookings?.slice(0, 5).map((booking) => ({
           id: booking.id,
           type: 'booking_created',
           client: booking.user?.name || 'Utilisateur',
@@ -78,7 +88,6 @@ const AdminDashboard = () => {
         setRecentActivity(activity)
 
         // Revenue data - simplified from stats
-        // TODO: Fetch actual revenue data from revenue report API
         setRevenueData([
           { month: dayjs().subtract(5, 'month').format('MMMM'), revenue: stats.total_bookings * 10, bookings: stats.total_bookings },
           { month: dayjs().subtract(4, 'month').format('MMMM'), revenue: stats.total_bookings * 12, bookings: stats.total_bookings },
@@ -97,13 +106,23 @@ const AdminDashboard = () => {
           apiRequests: stats.total_bookings || 0,
         })
 
+        // Fetch pending requests
+        try {
+          const pendingResponse = await api.get('/admin/pending-requests')
+          setPendingRequests(pendingResponse.data.data || [])
+        } catch (pendingError) {
+          console.error('Erreur lors du chargement des demandes en attente:', pendingError)
+        }
+
         setLoading(false)
-        console.log('AdminDashboard - Données chargées avec succès', { clientsCount: clients?.length || 0 })
       } catch (error) {
-      console.error('AdminDashboard - Erreur lors du chargement des données:', error)
-      setLoading(false)
-      // Afficher un message d'erreur à l'utilisateur
+        console.error('AdminDashboard - Erreur lors du chargement des données:', error)
+        setLoading(false)
+      }
     }
+    
+    // Appeler la fonction pour charger les données
+    fetchDashboardData()
   }, [])
 
   // Calculate platform-wide stats
@@ -264,13 +283,6 @@ const AdminDashboard = () => {
       ),
     },
   ]
-
-  // Debug: Vérifier si le composant se rend
-  console.log('AdminDashboard - Rendu du composant', { 
-    clientsCount: clients.length, 
-    isAuthenticated, 
-    userRole: user?.role 
-  })
 
   // Si pas authentifié ou pas admin, afficher un message
   if (!isAuthenticated || user?.role !== 'admin') {
@@ -573,6 +585,19 @@ const AdminDashboard = () => {
         <Col xs={24} lg={16}>
           <Card title="Alertes et notifications système">
             <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              {pendingRequests.length > 0 && (
+                <Alert
+                  message={`${pendingRequests.length} demande(s) de compte en attente`}
+                  description="Des utilisateurs ont demandé un compte Manager et attendent votre validation."
+                  type="info"
+                  showIcon
+                  action={
+                    <Button size="small" type="primary" onClick={() => navigate('/admin/pending-requests')}>
+                      Examiner
+                    </Button>
+                  }
+                />
+              )}
               <Alert
                 message="Clients approchant leurs limites"
                 description="2 clients approchent de leur limite de ressources. Considérez une mise à niveau."

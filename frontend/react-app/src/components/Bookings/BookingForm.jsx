@@ -106,10 +106,26 @@ const BookingForm = ({ resources, initialDate, onSuccess, booking, initialResour
       }
 
       try {
+        // Transformer les données pour le format attendu par le backend
+        // Backend attend: date (YYYY-MM-DD), start_time (HH:mm), end_time (HH:mm)
+        const startDateTime = dayjs(values.start_time)
+        const endDateTime = dayjs(values.end_time)
+        
+        const backendData = {
+          resource_id: values.resource_id,
+          date: startDateTime.format('YYYY-MM-DD'),
+          start_time: startDateTime.format('HH:mm'),
+          end_time: endDateTime.format('HH:mm'),
+          notes: values.notes || null,
+          is_recurring: values.is_recurring || false,
+          recurring_frequency: values.is_recurring ? values.recurring_frequency : null,
+          recurring_until: values.is_recurring && values.recurring_until ? values.recurring_until : null,
+        }
+
         if (booking) {
-          await dispatch(updateBooking({ id: booking.id, data: values }))
+          await dispatch(updateBooking({ id: booking.id, data: backendData }))
         } else {
-          await dispatch(createBooking(values))
+          await dispatch(createBooking(backendData))
         }
         onSuccess()
       } catch (error) {

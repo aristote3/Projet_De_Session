@@ -11,6 +11,68 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f0f2f5;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light mode styles */
+body.light-mode {
+  background-color: #f5f5f5;
+  color: #1f2937;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+  background-color: #020617;
+  color: #f1f5f9;
+}
+
+/* Smooth transitions for all components */
+body.dark-mode .ant-layout,
+body.dark-mode .ant-card,
+body.dark-mode .ant-table,
+body.dark-mode .ant-modal-content,
+body.dark-mode .ant-dropdown-menu,
+body.dark-mode .ant-select-dropdown,
+body.dark-mode .ant-picker-dropdown {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Custom scrollbar for dark mode */
+body.dark-mode ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Light mode scrollbar */
+body.light-mode ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body.light-mode ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+body.light-mode ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+body.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 code {
@@ -20,4 +82,141 @@ code {
 
 #root {
   min-height: 100vh;
+}
+
+/* Animation for theme toggle */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.theme-transition {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Dark mode text improvements */
+body.dark-mode .ant-typography,
+body.dark-mode .ant-card-head-title,
+body.dark-mode .ant-statistic-title,
+body.dark-mode .ant-statistic-content,
+body.dark-mode .ant-descriptions-item-label,
+body.dark-mode .ant-descriptions-item-content,
+body.dark-mode .ant-form-item-label > label,
+body.dark-mode .ant-table-thead > tr > th,
+body.dark-mode .ant-table-tbody > tr > td,
+body.dark-mode .ant-menu-item,
+body.dark-mode .ant-menu-title-content {
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .ant-typography.ant-typography-secondary,
+body.dark-mode .ant-statistic-title {
+  color: #94a3b8 !important;
+}
+
+/* Dark mode cards */
+body.dark-mode .ant-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .ant-card-head {
+  border-bottom-color: #334155 !important;
+}
+
+/* Dark mode tables */
+body.dark-mode .ant-table {
+  background: #1e293b !important;
+}
+
+body.dark-mode .ant-table-thead > tr > th {
+  background: #0f172a !important;
+  border-bottom-color: #334155 !important;
+}
+
+body.dark-mode .ant-table-tbody > tr > td {
+  border-bottom-color: #334155 !important;
+}
+
+body.dark-mode .ant-table-tbody > tr:hover > td {
+  background: rgba(56, 189, 248, 0.1) !important;
+}
+
+/* Dark mode inputs */
+body.dark-mode .ant-input,
+body.dark-mode .ant-input-affix-wrapper,
+body.dark-mode .ant-select-selector,
+body.dark-mode .ant-picker {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .ant-input::placeholder,
+body.dark-mode .ant-select-selection-placeholder {
+  color: #64748b !important;
+}
+
+/* Dark mode modals */
+body.dark-mode .ant-modal-content {
+  background: #1e293b !important;
+}
+
+body.dark-mode .ant-modal-header {
+  background: #1e293b !important;
+  border-bottom-color: #334155 !important;
+}
+
+body.dark-mode .ant-modal-title {
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .ant-modal-close-x {
+  color: #94a3b8 !important;
+}
+
+/* Dark mode dropdowns */
+body.dark-mode .ant-dropdown-menu,
+body.dark-mode .ant-select-dropdown {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+
+body.dark-mode .ant-dropdown-menu-item,
+body.dark-mode .ant-select-item {
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .ant-dropdown-menu-item:hover,
+body.dark-mode .ant-select-item-option-active {
+  background: rgba(56, 189, 248, 0.15) !important;
+}
+
+/* Dark mode buttons */
+body.dark-mode .ant-btn-default {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .ant-btn-default:hover {
+  background: #334155 !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+/* Dark mode alerts */
+body.dark-mode .ant-alert {
+  border: 1px solid #334155 !important;
+}
+
+body.dark-mode .ant-alert-message,
+body.dark-mode .ant-alert-description {
+  color: #e2e8f0 !important;
+}
+
+/* Dark mode sidebar trigger */
+body.dark-mode .ant-layout-sider-trigger {
+  background: #0f172a !important;
+  border-top: 1px solid #334155 !important;
 }

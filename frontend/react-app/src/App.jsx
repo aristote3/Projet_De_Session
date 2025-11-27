@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from 'antd'
 import { useSelector } from 'react-redux'
+import { useTheme } from './contexts/ThemeContext'
 import AppHeader from './components/Layout/AppHeader'
 import AppSider from './components/Layout/AppSider'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -26,6 +27,7 @@ import AdminSupport from './pages/Admin/AdminSupport'
 import AdminFeatures from './pages/Admin/AdminFeatures'
 import UserManagement from './pages/Admin/UserManagement'
 import Reports from './pages/Admin/Reports'
+import PendingRequests from './pages/Admin/PendingRequests'
 import ManagerDashboard from './pages/Manager/ManagerDashboard'
 import ManagerResourceManagement from './pages/Manager/ManagerResourceManagement'
 import ManagerUserManagement from './pages/Manager/ManagerUserManagement'
@@ -34,6 +36,12 @@ import ManagerBusinessSettings from './pages/Manager/ManagerBusinessSettings'
 import ManagerReports from './pages/Manager/ManagerReports'
 import ManagerSettings from './pages/Manager/ManagerSettings'
 import ManagerSupport from './pages/Manager/ManagerSupport'
+import ManagerBroadcast from './pages/Manager/ManagerBroadcast'
+import Messages from './pages/Messages'
+import FloorPlan from './pages/FloorPlan'
+import Pricing from './pages/Pricing'
+import News from './pages/News'
+import ChatBot from './components/ChatBot/ChatBot'
 import './App.css'
 
 const { Content } = Layout
@@ -41,6 +49,7 @@ const { Content } = Layout
 function App() {
   const [collapsed, setCollapsed] = React.useState(false)
   const { isAuthenticated, user } = useSelector((state) => state.auth)
+  const { isDarkMode, theme } = useTheme()
 
   // Fonction pour déterminer la route par défaut selon le rôle
   const getDefaultRoute = () => {
@@ -66,16 +75,28 @@ function App() {
         {/* Page d'inscription */}
         <Route path="/register" element={<Register />} />
         
+        {/* Pages publiques */}
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/news" element={<News />} />
+        
         {/* Routes protégées de l'application */}
         {isAuthenticated && (
           <Route
             path="/*"
             element={
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout style={{ minHeight: '100vh', background: isDarkMode ? '#020617' : '#f5f5f5', transition: 'background 0.3s ease' }}>
         <AppSider collapsed={collapsed} setCollapsed={setCollapsed} />
-        <Layout>
+        <Layout style={{ background: 'transparent' }}>
           <AppHeader />
-          <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', borderRadius: 8, marginLeft: collapsed ? 96 : 266 }}>
+          <Content style={{ 
+            margin: '24px 16px', 
+            padding: 24, 
+            background: isDarkMode ? '#1e293b' : '#fff', 
+            borderRadius: 8, 
+            marginLeft: collapsed ? 96 : 266,
+            transition: 'all 0.3s ease',
+            boxShadow: isDarkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+          }}>
             <Routes>
                       {/* Routes User - Utilisateurs normaux voient UserDashboard */}
                       <Route path="/dashboard" element={<ProtectedRoute>{user?.role === 'user' ? <UserDashboard /> : <Dashboard />}</ProtectedRoute>} />
@@ -89,6 +110,9 @@ function App() {
                           <Route path="/notifications" element={<ProtectedRoute><UserNotifications /></ProtectedRoute>} />
                         </>
                       )}
+                      {/* Messages - accessible à tous les rôles authentifiés */}
+                      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                      <Route path="/floor-plan" element={<ProtectedRoute><FloorPlan /></ProtectedRoute>} />
                       {/* Routes Admin - SaaS Platform Owner */}
                       <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
                       <Route path="/admin/clients" element={<ProtectedRoute requiredRole="admin"><AdminClientManagement /></ProtectedRoute>} />
@@ -100,6 +124,7 @@ function App() {
                       <Route path="/admin/monitoring" element={<ProtectedRoute requiredRole="admin"><AdminMonitoring /></ProtectedRoute>} />
                       <Route path="/admin/support" element={<ProtectedRoute requiredRole="admin"><AdminSupport /></ProtectedRoute>} />
                       <Route path="/admin/features" element={<ProtectedRoute requiredRole="admin"><AdminFeatures /></ProtectedRoute>} />
+                      <Route path="/admin/pending-requests" element={<ProtectedRoute requiredRole="admin"><PendingRequests /></ProtectedRoute>} />
                       {/* Routes Manager - Client Tenant Owner */}
                       <Route path="/manager" element={<ProtectedRoute requiredRole="manager"><ManagerDashboard /></ProtectedRoute>} />
                       <Route path="/manager/resources" element={<ProtectedRoute requiredRole="manager"><ManagerResourceManagement /></ProtectedRoute>} />
@@ -109,6 +134,7 @@ function App() {
                       <Route path="/manager/reports" element={<ProtectedRoute requiredRole="manager"><ManagerReports /></ProtectedRoute>} />
                       <Route path="/manager/settings" element={<ProtectedRoute requiredRole="manager"><ManagerSettings /></ProtectedRoute>} />
                       <Route path="/manager/support" element={<ProtectedRoute requiredRole="manager"><ManagerSupport /></ProtectedRoute>} />
+                      <Route path="/manager/broadcast" element={<ProtectedRoute requiredRole="manager"><ManagerBroadcast /></ProtectedRoute>} />
                       <Route path="*" element={<Navigate to={user?.role === 'admin' ? '/admin' : user?.role === 'manager' ? '/manager' : '/dashboard'} replace />} />
             </Routes>
           </Content>
@@ -123,6 +149,7 @@ function App() {
           <Route path="*" element={<Navigate to="/home" replace />} />
         )}
       </Routes>
+      <ChatBot />
       </Router>
     </ErrorBoundary>
   )

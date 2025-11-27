@@ -33,22 +33,23 @@ class CalendarController extends Controller
         $bookings = $query->get();
 
         $events = $bookings->map(function ($booking) {
-            $start = $booking->date->format('Y-m-d') . 'T' . $booking->start_time;
-            $end = $booking->date->format('Y-m-d') . 'T' . $booking->end_time;
+            $dateStr = $booking->date ? $booking->date->format('Y-m-d') : date('Y-m-d');
+            $start = $dateStr . 'T' . $booking->start_time;
+            $end = $dateStr . 'T' . $booking->end_time;
 
             return [
                 'id' => $booking->id,
-                'title' => $booking->resource->name . ' - ' . $booking->user->name,
+                'title' => ($booking->resource?->name ?? 'Ressource') . ' - ' . ($booking->user?->name ?? 'Utilisateur'),
                 'start' => $start,
                 'end' => $end,
-                'resource' => [
+                'resource' => $booking->resource ? [
                     'id' => $booking->resource->id,
                     'name' => $booking->resource->name,
-                ],
-                'user' => [
+                ] : null,
+                'user' => $booking->user ? [
                     'id' => $booking->user->id,
                     'name' => $booking->user->name,
-                ],
+                ] : null,
                 'status' => $booking->status,
                 'color' => $this->getStatusColor($booking->status),
             ];

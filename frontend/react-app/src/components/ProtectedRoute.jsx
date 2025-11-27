@@ -5,28 +5,37 @@ import { Navigate } from 'react-router-dom'
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const { isAuthenticated, user } = useSelector((state) => state.auth)
 
+  // Rediriger vers login si non authentifié
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
-  // Vérifier le rôle si requis
-  if (requiredRole && user?.role !== requiredRole) {
-    // Les admins ont accès à tout sauf les routes manager spécifiques
-    if (user?.role === 'admin' && requiredRole !== 'manager') {
-      // Admin peut accéder à tout sauf les routes manager
-      return children
-    }
-    // Rediriger selon le rôle de l'utilisateur
-    if (user?.role === 'admin') {
-      return <Navigate to="/admin" replace />
-    } else if (user?.role === 'manager') {
-      return <Navigate to="/manager" replace />
-    } else {
-      return <Navigate to="/dashboard" replace />
-    }
+  // Si aucun rôle requis, autoriser l'accès
+  if (!requiredRole) {
+    return children
   }
 
-  return children
+  // Vérifier le rôle requis
+  const userRole = user?.role
+
+  // Admin a accès à toutes les routes admin
+  if (requiredRole === 'admin' && userRole === 'admin') {
+    return children
+  }
+
+  // Manager a accès aux routes manager
+  if (requiredRole === 'manager' && userRole === 'manager') {
+    return children
+  }
+
+  // Si le rôle ne correspond pas, rediriger vers le dashboard approprié
+  if (userRole === 'admin') {
+    return <Navigate to="/admin" replace />
+  } else if (userRole === 'manager') {
+    return <Navigate to="/manager" replace />
+  } else {
+    return <Navigate to="/dashboard" replace />
+  }
 }
 
 export default ProtectedRoute

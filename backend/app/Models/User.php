@@ -79,5 +79,13 @@ class User extends Authenticatable
     {
         return $this->role === 'manager';
     }
+
+    /**
+     * Get the organization for this manager
+     */
+    public function organization()
+    {
+        return $this->hasOne(Organization::class);
+    }
 }
 

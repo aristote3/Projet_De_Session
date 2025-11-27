@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # MySQL Database
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: youmanage-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: youmanage
+      MYSQL_USER: youmanage
+      MYSQL_PASSWORD: youmanage
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - youmanage-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis Cache
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: youmanage-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - youmanage-network
+
+  # ============================================
+  # Laravel Backend API
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: youmanage-backend
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_KEY=base64:randomkeyhere123456789012345678901234=
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=youmanage
+      - DB_USERNAME=youmanage
+      - DB_PASSWORD=youmanage
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=mailhog
+      - MAIL_PORT=1025
+      - MAIL_FROM_ADDRESS=noreply@youmanage.local
+      - MAIL_FROM_NAME=YouManage
+    volumes:
+      - ./backend:/var/www/html
+      - /var/www/html/vendor
+    ports:
+      - "8001:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - youmanage-network
+
+  # ============================================
+  # React Frontend
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend/react-app
+      dockerfile: Dockerfile
+    container_name: youmanage-frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:8001/api
+    volumes:
+      - ./frontend/react-app:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - youmanage-network
+
+  # ============================================
+  # phpMyAdmin - Database Management
+  # ============================================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: youmanage-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: youmanage
+      PMA_PASSWORD: youmanage
+      UPLOAD_LIMIT: 100M
+    ports:
+      - "8080:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - youmanage-network
+
+  # ============================================
+  # Mailhog - Email Testing
+  # ============================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: youmanage-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - youmanage-network
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  youmanage-network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  mysql_data:
+  redis_data:
+

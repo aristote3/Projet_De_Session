@@ -1,12 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import axios from 'axios'
-
-const API_URL = '/api'
+import api from '../../utils/api'
 
 export const fetchResources = createAsyncThunk(
   'resources/fetchResources',
   async () => {
-    const response = await axios.get(`${API_URL}/resources`)
+    const response = await api.get('/resources')
     return response.data
   }
 )
@@ -14,7 +12,7 @@ export const fetchResources = createAsyncThunk(
 export const createResource = createAsyncThunk(
   'resources/createResource',
   async (resourceData) => {
-    const response = await axios.post(`${API_URL}/resources`, resourceData)
+    const response = await api.post('/resources', resourceData)
     return response.data
   }
 )
@@ -22,7 +20,7 @@ export const createResource = createAsyncThunk(
 export const updateResource = createAsyncThunk(
   'resources/updateResource',
   async ({ id, data }) => {
-    const response = await axios.put(`${API_URL}/resources/${id}`, data)
+    const response = await api.put(`/resources/${id}`, data)
     return response.data
   }
 )
@@ -30,7 +28,7 @@ export const updateResource = createAsyncThunk(
 export const deleteResource = createAsyncThunk(
   'resources/deleteResource',
   async (id) => {
-    await axios.delete(`${API_URL}/resources/${id}`)
+    await api.delete(`/resources/${id}`)
     return id
   }
 )
@@ -58,12 +56,14 @@ const resourcesSlice = createSlice({
         state.error = action.error.message
       })
       .addCase(createResource.fulfilled, (state, action) => {
-        state.items.push(action.payload)
+        const resource = action.payload.data || action.payload
+        state.items.push(resource)
       })
       .addCase(updateResource.fulfilled, (state, action) => {
-        const index = state.items.findIndex(item => item.id === action.payload.id)
+        const resource = action.payload.data || action.payload
+        const index = state.items.findIndex(item => item.id === resource.id)
         if (index !== -1) {
-          state.items[index] = action.payload
+          state.items[index] = resource
         }
       })
       .addCase(deleteResource.fulfilled, (state, action) => {
