@@ -3,6 +3,7 @@ import { Table, Typography, Button, Tag, Space, Modal, message } from 'antd'
 import { PlusOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchBookings, approveBooking, cancelBooking } from '../store/slices/bookingsSlice'
+import { fetchResources } from '../store/slices/resourcesSlice'
 import BookingForm from '../components/Bookings/BookingForm'
 import UserBookings from './User/UserBookings'
 import dayjs from 'dayjs'
@@ -25,18 +26,32 @@ const Bookings = () => {
     dispatch(fetchBookings())
   }, [dispatch])
 
-  const handleApprove = (id) => {
-    dispatch(approveBooking(id))
-    message.success('Réservation approuvée')
+  const handleApprove = async (id) => {
+    try {
+      await dispatch(approveBooking(id)).unwrap()
+      message.success('Réservation approuvée')
+      // Rafraîchir les ressources pour mettre à jour leur statut
+      dispatch(fetchResources())
+      dispatch(fetchBookings())
+    } catch (error) {
+      message.error('Erreur lors de l\'approbation')
+    }
   }
 
   const handleCancel = (id) => {
     Modal.confirm({
       title: 'Confirmer l\'annulation',
       content: 'Êtes-vous sûr de vouloir annuler cette réservation ?',
-      onOk: () => {
-        dispatch(cancelBooking(id))
-        message.success('Réservation annulée')
+      onOk: async () => {
+        try {
+          await dispatch(cancelBooking(id)).unwrap()
+          message.success('Réservation annulée')
+          // Rafraîchir les ressources pour mettre à jour leur statut
+          dispatch(fetchResources())
+          dispatch(fetchBookings())
+        } catch (error) {
+          message.error('Erreur lors de l\'annulation')
+        }
       },
     })
   }
@@ -137,6 +152,7 @@ const Bookings = () => {
           onSuccess={() => {
             setIsModalVisible(false)
             dispatch(fetchBookings())
+            dispatch(fetchResources())
           }}
         />
       </Modal>

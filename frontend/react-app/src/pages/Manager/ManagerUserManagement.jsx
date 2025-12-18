@@ -3,6 +3,7 @@ import { Table, Typography, Button, Tag, Space, Modal, Form, Input, Select, mess
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UserOutlined, MailOutlined, CheckCircleOutlined, StopOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchUsers } from '../../store/slices/usersSlice'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -41,37 +42,77 @@ const ManagerUserManagement = () => {
 
   const handleSave = async (values) => {
     try {
-      // TODO: API call to save user
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      message.success(editingUser ? 'Utilisateur modifié avec succès' : 'Invitation envoyée avec succès')
+      if (editingUser) {
+        await api.put(`/users/${editingUser.id}`, {
+          name: values.name,
+          email: values.email,
+          role: 'user',
+          status: values.status || 'active',
+          quota: values.quota || null,
+        })
+        message.success('Utilisateur modifié avec succès')
+      } else {
+        // Générer un mot de passe temporaire
+        const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'
+        
+        await api.post('/users', {
+          name: values.name,
+          email: values.email,
+          password: tempPassword,
+          role: 'user',
+          status: values.status || 'active',
+          quota: values.quota || null,
+        })
+        message.success('Utilisateur créé avec succès')
+      }
+      
       setIsModalVisible(false)
       setEditingUser(null)
       form.resetFields()
       dispatch(fetchUsers())
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.email?.[0] || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     }
   }
 
-  const handleDeactivate = (id) => {
-    // TODO: API call to deactivate
-    message.success('Compte désactivé')
-    dispatch(fetchUsers())
+  const handleDeactivate = async (id) => {
+    try {
+      await api.put(`/users/${id}`, { status: 'inactive' })
+      message.success('Compte désactivé')
+      dispatch(fetchUsers())
+    } catch (error) {
+      console.error('Erreur:', error)
+      message.error('Erreur lors de la désactivation')
+    }
   }
 
-  const handleActivate = (id) => {
-    // TODO: API call to activate
-    message.success('Compte activé')
-    dispatch(fetchUsers())
+  const handleActivate = async (id) => {
+    try {
+      await api.put(`/users/${id}`, { status: 'active' })
+      message.success('Compte activé')
+      dispatch(fetchUsers())
+    } catch (error) {
+      console.error('Erreur:', error)
+      message.error('Erreur lors de l\'activation')
+    }
   }
 
   const handleResetPassword = (id) => {
     Modal.confirm({
       title: 'Réinitialiser le mot de passe',
       content: 'Un email avec un nouveau mot de passe sera envoyé à cet utilisateur.',
-      onOk: () => {
-        // TODO: API call
-        message.success('Email de réinitialisation envoyé')
+      onOk: async () => {
+        try {
+          const response = await api.post(`/users/${id}/reset-password`, {
+            send_email: false, // Pour l'instant, on retourne juste le mot de passe
+          })
+          message.success(`Mot de passe réinitialisé. Nouveau mot de passe: ${response.data.temp_password}`)
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors de la réinitialisation')
+        }
       },
     })
   }

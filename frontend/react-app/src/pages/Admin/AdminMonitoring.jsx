@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Typography, Table, Tag, Button, Space, Input, Select, DatePicker, Row, Col, Statistic, Timeline, Alert, Tabs } from 'antd'
+import { Card, Typography, Table, Tag, Button, Space, Input, Select, DatePicker, Row, Col, Statistic, Timeline, Alert, Tabs, message } from 'antd'
 import { SearchOutlined, ReloadOutlined, DownloadOutlined, WarningOutlined, CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import api from '../../utils/api'
@@ -21,32 +21,94 @@ const AdminMonitoring = () => {
     const fetchLogs = async () => {
       try {
         setLoading(true)
-        // Fetch audit trail from API
-        const response = await api.get('/admin/audit-trail', {
-          params: {
-            per_page: 50,
-          }
-        })
-
-        const logs = response.data.data || []
-        const auditLogsData = logs.map((log) => ({
-          id: log.id,
-          timestamp: log.created_at,
-          user: log.user?.email || 'Unknown',
-          action: log.action || 'unknown',
-          resource: log.model_type || 'unknown',
-          resourceId: log.model_id || 0,
-          details: log.description || log.action,
-          ip: log.ip_address || 'N/A',
-        }))
-
-        setAuditLogs(auditLogsData)
         
-        // Error logs and security events are not yet implemented in backend
-        // Keep them empty for now
-        setErrorLogs([])
-        setSecurityEvents([])
-        setApiUsage([])
+        // Fetch audit trail
+        if (logType === 'audit') {
+          const response = await api.get('/admin/audit-trail', {
+            params: {
+              per_page: 50,
+            }
+          })
+
+          const logs = response.data.data || []
+          const auditLogsData = logs.map((log) => ({
+            id: log.id,
+            timestamp: log.created_at,
+            user: log.user?.email || 'Unknown',
+            action: log.action || 'unknown',
+            resource: log.model_type || 'unknown',
+            resourceId: log.model_id || 0,
+            details: log.changes ? JSON.stringify(log.changes) : log.action,
+            ip: log.ip_address || 'N/A',
+          }))
+
+          setAuditLogs(auditLogsData)
+        }
+        
+        // Fetch error logs
+        if (logType === 'errors') {
+          const errorResponse = await api.get('/admin/error-logs', {
+            params: {
+              lines: 100,
+            }
+          })
+          
+          const errorLogsData = (errorResponse.data.data || []).map((log, index) => ({
+            id: index,
+            timestamp: log.timestamp,
+            level: log.level,
+            message: log.message,
+            endpoint: log.message.match(/\[.*?\]/)?.[0] || 'N/A',
+            user: 'System',
+            stack: log.stack,
+          }))
+          
+          setErrorLogs(errorLogsData)
+        }
+        
+        // Fetch security events
+        if (logType === 'security') {
+          const securityResponse = await api.get('/admin/security-events', {
+            params: {
+              per_page: 50,
+            }
+          })
+          
+          const securityData = (securityResponse.data.data || []).map((event) => ({
+            id: event.id,
+            timestamp: event.timestamp,
+            type: event.type,
+            user: event.user,
+            ip: event.ip,
+            details: event.details,
+            severity: event.severity,
+          }))
+          
+          setSecurityEvents(securityData)
+        }
+        
+        // Fetch API usage
+        if (logType === 'api') {
+          const apiResponse = await api.get('/admin/api-usage', {
+            params: {
+              start_date: dateRange[0].format('YYYY-MM-DD'),
+              end_date: dateRange[1].format('YYYY-MM-DD'),
+            }
+          })
+          
+          const apiUsageData = (apiResponse.data.data || []).map((usage, index) => ({
+            id: index,
+            endpoint: usage.endpoint,
+            method: usage.method,
+            requests: usage.requests,
+            avgResponseTime: usage.avgResponseTime,
+            errorRate: usage.errorRate || 0,
+          }))
+          
+          setApiUsage(apiUsageData)
+        }
+        
+        setLoading(false)
       } catch (error) {
         console.error('Erreur lors du chargement des logs:', error)
         // Fallback to empty arrays
@@ -58,9 +120,7 @@ const AdminMonitoring = () => {
       }
     }
 
-    if (logType === 'audit') {
-      fetchLogs()
-    }
+    fetchLogs()
   }, [dateRange, logType])
 
   const getLogLevelColor = (level) => {
@@ -320,7 +380,10 @@ const AdminMonitoring = () => {
             value={dateRange}
             onChange={setDateRange}
           />
-          <Button icon={<ReloadOutlined />} onClick={() => message.info('Actualisation...')}>
+          <Button icon={<ReloadOutlined />} onClick={() => {
+            setLogType(logType)
+            message.info('Actualisation...')
+          }}>
             Actualiser
           </Button>
           <Button icon={<DownloadOutlined />}>

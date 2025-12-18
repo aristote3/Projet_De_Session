@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchResources } from '../store/slices/resourcesSlice'
+import { useResourcePolling } from '../hooks/useResourcePolling'
 import { fetchBookings } from '../store/slices/bookingsSlice'
 
 const { Title } = Typography
@@ -18,9 +19,11 @@ const Dashboard = () => {
   const { items: bookings, loading: bookingsLoading } = useSelector((state) => state.bookings)
 
   useEffect(() => {
-    dispatch(fetchResources())
     dispatch(fetchBookings())
   }, [dispatch])
+
+  // Polling automatique toutes les 30 secondes pour mettre à jour les ressources en temps réel
+  useResourcePolling(30, true)
 
   const stats = [
     {

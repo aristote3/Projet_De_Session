@@ -8,6 +8,7 @@ use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -134,10 +135,17 @@ class UserController extends Controller
      */
     public function updateProfile(Request $request, User $user)
     {
+        // Vérifier que l'utilisateur peut modifier son propre profil ou est admin
+        if ($request->user()->id !== $user->id && !$request->user()->isAdmin()) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable|string|min:6',
+            'phone' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -148,15 +156,52 @@ class UserController extends Controller
         }
 
         $data = $validator->validated();
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        }
-
         $user->update($data);
 
         return response()->json([
-            'data' => $user,
+            'data' => $user->fresh(),
             'message' => 'Profile updated successfully'
+        ]);
+    }
+
+    /**
+     * Change user password
+     */
+    public function changePassword(Request $request, User $user)
+    {
+        // Vérifier que l'utilisateur peut modifier son propre mot de passe ou est admin
+        if ($request->user()->id !== $user->id && !$request->user()->isAdmin()) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Vérifier le mot de passe actuel (sauf pour les admins)
+        if (!$request->user()->isAdmin() && !Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect',
+                'errors' => ['current_password' => ['Le mot de passe actuel est incorrect']]
+            ], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return response()->json([
+            'message' => 'Password changed successfully'
         ]);
     }
 
@@ -239,10 +284,97 @@ class UserController extends Controller
      */
     public function updateNotificationPreferences(Request $request, User $user)
     {
-        // TODO: Implement notification preferences
+        // Vérifier que l'utilisateur peut modifier ses propres préférences ou est admin
+        if ($request->user()->id !== $user->id && !$request->user()->isAdmin()) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'nullable|boolean',
+            'sms' => 'nullable|boolean',
+            'push' => 'nullable|boolean',
+            'bookingConfirmation' => 'nullable|boolean',
+            'bookingReminder' => 'nullable|boolean',
+            'bookingCancellation' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Stocker les préférences dans un champ JSON ou une table séparée
+        // Pour l'instant, on utilise un champ JSON dans la table users
+        $preferences = $validator->validated();
+        
+        // Si la table user_notification_preferences existe, utiliser celle-ci
+        // Sinon, stocker dans un champ JSON
+        $user->notification_preferences = $preferences;
+        $user->save();
+
         return response()->json([
-            'message' => 'Notification preferences not implemented yet'
-        ], 501);
+            'data' => $preferences,
+            'message' => 'Notification preferences updated successfully'
+        ]);
+    }
+
+    /**
+     * Reset user password (admin only)
+     */
+    public function resetPassword(Request $request, User $user)
+    {
+        if (!$request->user()->isAdmin()) {
+            return response()->json([
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'send_email' => 'nullable|boolean',
+        ]);
+
+        // Générer un mot de passe temporaire
+        $tempPassword = Str::random(12);
+        
+        $user->update([
+            'password' => Hash::make($tempPassword)
+        ]);
+
+        // TODO: Envoyer un email avec le nouveau mot de passe si send_email est true
+        if ($request->get('send_email', false)) {
+            // Mail::to($user->email)->send(new PasswordResetMail($tempPassword));
+        }
+
+        return response()->json([
+            'message' => 'Password reset successfully',
+            'temp_password' => $tempPassword, // Retourner seulement si admin (pour test)
+        ]);
+    }
+
+    /**
+     * Impersonate a user (admin only)
+     */
+    public function impersonate(Request $request, User $user)
+    {
+        if (!$request->user()->isAdmin()) {
+            return response()->json([
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        // Créer un token Sanctum pour l'utilisateur à impersonner
+        $token = $user->createToken('impersonation-token', ['*'], now()->addHours(1))->plainTextToken;
+
+        return response()->json([
+            'message' => 'Impersonation token created',
+            'token' => $token,
+            'user' => $user,
+            'redirect_url' => '/manager', // ou '/user' selon le rôle
+        ]);
     }
 
     /**

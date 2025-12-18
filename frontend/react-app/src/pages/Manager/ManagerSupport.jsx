@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, Typography, Form, Input, Button, Space, message, List, Avatar, Tag, Divider, Row, Col, Select, Alert } from 'antd'
 import { CustomerServiceOutlined, SendOutlined, MessageOutlined, MailOutlined, PhoneOutlined, QuestionCircleOutlined } from '@ant-design/icons'
 import { useSelector } from 'react-redux'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -13,35 +14,63 @@ const ManagerSupport = () => {
   const [announcementForm] = Form.useForm()
   const [announcementLoading, setAnnouncementLoading] = useState(false)
 
-  // TODO: Fetch support tickets from API
-  const [supportTickets] = useState([
-    {
-      id: 1,
-      subject: 'Problème de connexion',
-      status: 'open',
-      priority: 'high',
-      createdAt: '2024-12-10T10:30:00',
-      lastMessage: 'Bonjour, je rencontre des difficultés...',
-    },
-    {
-      id: 2,
-      subject: 'Question sur les quotas',
-      status: 'resolved',
-      priority: 'medium',
-      createdAt: '2024-12-08T14:20:00',
-      lastMessage: 'Merci pour votre aide !',
-    },
-  ])
+  const [supportTickets, setSupportTickets] = useState([])
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const response = await api.get('/support/tickets', {
+          params: {
+            user_id: user?.id,
+          }
+        })
+        const ticketsData = (response.data.data || []).map(ticket => ({
+          id: ticket.id,
+          subject: ticket.subject,
+          status: ticket.status,
+          priority: ticket.priority,
+          createdAt: ticket.created_at,
+          lastMessage: ticket.message.substring(0, 100) + '...',
+        }))
+        setSupportTickets(ticketsData)
+      } catch (error) {
+        console.error('Erreur lors du chargement des tickets:', error)
+      }
+    }
+
+    if (user) {
+      fetchTickets()
+    }
+  }, [user])
 
   const handleSubmitTicket = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call to create support ticket
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post('/support/tickets', {
+        subject: values.subject,
+        message: values.message,
+        category: values.category || 'other',
+        priority: values.priority || 'medium',
+      })
       message.success('Ticket de support créé avec succès. Notre équipe vous répondra sous peu.')
       form.resetFields()
+      // Recharger les tickets
+      const response = await api.get('/support/tickets', {
+        params: { user_id: user?.id }
+      })
+      const ticketsData = (response.data.data || []).map(ticket => ({
+        id: ticket.id,
+        subject: ticket.subject,
+        status: ticket.status,
+        priority: ticket.priority,
+        createdAt: ticket.created_at,
+        lastMessage: ticket.message.substring(0, 100) + '...',
+      }))
+      setSupportTickets(ticketsData)
     } catch (error) {
-      message.error('Erreur lors de la création du ticket')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la création du ticket'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -50,12 +79,17 @@ const ManagerSupport = () => {
   const handleSendAnnouncement = async (values) => {
     setAnnouncementLoading(true)
     try {
-      // TODO: API call to send announcement
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post('/messages/broadcast', {
+        subject: values.subject,
+        content: values.content,
+        channel: 'all',
+      })
       message.success('Annonce envoyée à tous vos utilisateurs')
       announcementForm.resetFields()
     } catch (error) {
-      message.error('Erreur lors de l\'envoi de l\'annonce')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de l\'envoi de l\'annonce'
+      message.error(errorMessage)
     } finally {
       setAnnouncementLoading(false)
     }

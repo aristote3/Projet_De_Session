@@ -44,8 +44,10 @@ class AdminController extends Controller
             }])
             ->get()
             ->map(function ($manager) {
-                // Get resources count for this manager (if manager has resources)
-                $resourcesCount = Resource::where('created_by', $manager->id)->count();
+                // Get resources count for this manager
+                // Note: Since resources table doesn't have created_by, we count all resources
+                // In a real multi-tenant system, you'd filter by organization/tenant
+                $resourcesCount = Resource::count(); // Simplified - all resources
                 
                 // Calculate revenue (simplified - can be enhanced)
                 $revenue = Booking::whereHas('user', function ($q) use ($manager) {
@@ -60,12 +62,24 @@ class AdminController extends Controller
                     'name' => $manager->name . ' Organization', // Simplified
                     'manager' => $manager->name,
                     'email' => $manager->email,
+                    'phone' => null, // TODO: Add phone field to users table
                     'subscription' => 'Premium', // TODO: Add subscription model
                     'status' => $manager->status ?? 'active',
                     'users' => User::where('role', 'user')->count(), // Simplified
                     'resources' => $resourcesCount,
                     'bookings' => $manager->bookings_count,
                     'revenue' => $revenue,
+                    'quota' => [
+                        'maxUsers' => $manager->quota ?? 100,
+                        'maxResources' => 50,
+                        'maxBookings' => 1000,
+                    ],
+                    'billing' => [
+                        'plan' => 'Premium',
+                        'price' => 299,
+                        'billingCycle' => 'monthly',
+                        'nextBilling' => now()->addMonth()->format('Y-m-d'),
+                    ],
                     'createdAt' => $manager->created_at->format('Y-m-d'),
                     'growth' => 0, // TODO: Calculate growth
                     'lastActivity' => $manager->updated_at->toIso8601String(),
@@ -353,6 +367,190 @@ class AdminController extends Controller
                 'per_page' => $logs->perPage(),
                 'total' => $logs->total(),
                 'last_page' => $logs->lastPage(),
+            ]
+        ]);
+    }
+
+    /**
+     * Get error logs from Laravel log file
+     */
+    public function errorLogs(Request $request)
+    {
+        $logFile = storage_path('logs/laravel.log');
+        $lines = $request->get('lines', 100);
+        
+        if (!file_exists($logFile)) {
+            return response()->json([
+                'data' => [],
+                'message' => 'Log file not found'
+            ]);
+        }
+
+        $errorLogs = [];
+        $file = new \SplFileObject($logFile);
+        $file->seek(PHP_INT_MAX);
+        $totalLines = $file->key();
+        
+        // Read last N lines
+        $startLine = max(0, $totalLines - $lines);
+        $file->seek($startLine);
+        
+        $currentLog = null;
+        while (!$file->eof()) {
+            $line = $file->current();
+            $file->next();
+            
+            // Parse Laravel log format: [YYYY-MM-DD HH:MM:SS] local.LEVEL: message
+            if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+): (.+)$/', $line, $matches)) {
+                if ($currentLog) {
+                    $errorLogs[] = $currentLog;
+                }
+                
+                $currentLog = [
+                    'timestamp' => $matches[1],
+                    'environment' => $matches[2],
+                    'level' => strtolower($matches[3]),
+                    'message' => $matches[4],
+                    'stack' => '',
+                ];
+            } elseif ($currentLog && (strpos($line, 'Stack trace:') !== false || strpos($line, 'at ') !== false)) {
+                $currentLog['stack'] .= $line . "\n";
+            } elseif ($currentLog && trim($line) !== '') {
+                $currentLog['message'] .= "\n" . trim($line);
+            }
+        }
+        
+        if ($currentLog) {
+            $errorLogs[] = $currentLog;
+        }
+        
+        // Filter by level if requested
+        if ($request->has('level')) {
+            $errorLogs = array_filter($errorLogs, function($log) use ($request) {
+                return $log['level'] === $request->level;
+            });
+        }
+        
+        // Reverse to show newest first
+        $errorLogs = array_reverse($errorLogs);
+        
+        return response()->json([
+            'data' => array_values($errorLogs),
+            'total' => count($errorLogs)
+        ]);
+    }
+
+    /**
+     * Get API usage statistics from Telescope
+     */
+    public function apiUsage(Request $request)
+    {
+        try {
+            // Use Telescope data if available
+            $telescopeEnabled = config('telescope.enabled', false);
+            
+            if ($telescopeEnabled && DB::connection()->getDatabaseName()) {
+                $startDate = $request->get('start_date', now()->subDays(7)->toDateString());
+                $endDate = $request->get('end_date', now()->toDateString());
+                
+                $usage = DB::table('telescope_entries')
+                    ->where('type', 'request')
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->select(
+                        DB::raw('content->>"$.uri" as endpoint'),
+                        DB::raw('content->>"$.method" as method'),
+                        DB::raw('COUNT(*) as requests'),
+                        DB::raw('AVG(CAST(content->>"$.duration" AS UNSIGNED)) as avg_response_time')
+                    )
+                    ->groupBy('endpoint', 'method')
+                    ->orderBy('requests', 'desc')
+                    ->get()
+                    ->map(function ($item) {
+                        return [
+                            'endpoint' => $item->endpoint ?? 'unknown',
+                            'method' => $item->method ?? 'GET',
+                            'requests' => (int)$item->requests,
+                            'avgResponseTime' => round($item->avg_response_time ?? 0, 2),
+                            'errorRate' => 0, // Would need to calculate from exceptions
+                        ];
+                    });
+                
+                return response()->json([
+                    'data' => $usage,
+                    'period' => [
+                        'start_date' => $startDate,
+                        'end_date' => $endDate,
+                    ]
+                ]);
+            }
+            
+            // Fallback: return empty array if Telescope not available
+            return response()->json([
+                'data' => [],
+                'message' => 'Telescope not enabled or database not available'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'data' => [],
+                'message' => 'Error fetching API usage: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get security events (failed logins, unauthorized access, etc.)
+     */
+    public function securityEvents(Request $request)
+    {
+        $query = AuditLog::with('user')
+            ->whereIn('action', ['failed_login', 'unauthorized_access', 'suspicious_activity'])
+            ->orWhere(function($q) {
+                $q->where('action', 'delete')
+                  ->where('model_type', 'App\Models\User');
+            });
+
+        if ($request->has('severity')) {
+            // Map severity to actions
+            $severityMap = [
+                'high' => ['unauthorized_access', 'suspicious_activity'],
+                'medium' => ['failed_login'],
+                'low' => ['delete'],
+            ];
+            
+            if (isset($severityMap[$request->severity])) {
+                $query->whereIn('action', $severityMap[$request->severity]);
+            }
+        }
+
+        $perPage = $request->get('per_page', 50);
+        $events = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        $eventsData = $events->map(function ($log) {
+            $severity = 'low';
+            if (in_array($log->action, ['unauthorized_access', 'suspicious_activity'])) {
+                $severity = 'high';
+            } elseif ($log->action === 'failed_login') {
+                $severity = 'medium';
+            }
+
+            return [
+                'id' => $log->id,
+                'timestamp' => $log->created_at,
+                'type' => $log->action,
+                'user' => $log->user ? $log->user->email : 'Unknown',
+                'ip' => $log->ip_address,
+                'details' => $log->changes ? json_encode($log->changes) : $log->action,
+                'severity' => $severity,
+            ];
+        });
+
+        return response()->json([
+            'data' => $eventsData,
+            'meta' => [
+                'current_page' => $events->currentPage(),
+                'per_page' => $events->perPage(),
+                'total' => $events->total(),
+                'last_page' => $events->lastPage(),
             ]
         ]);
     }

@@ -41,6 +41,11 @@ const FloorMap = ({ onResourceSelect, showBookingInfo = true }) => {
 
   useEffect(() => {
     fetchResources()
+    // Polling automatique toutes les 30 secondes
+    const interval = setInterval(() => {
+      fetchResources()
+    }, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchResources = async () => {

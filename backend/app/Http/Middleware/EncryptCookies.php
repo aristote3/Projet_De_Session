@@ -12,7 +12,7 @@ class EncryptCookies extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // No cookies excluded - all cookies encrypted for security
     ];
 }
 

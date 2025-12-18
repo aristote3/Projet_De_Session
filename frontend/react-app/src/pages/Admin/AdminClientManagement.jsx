@@ -3,6 +3,7 @@ import { Table, Typography, Button, Tag, Space, Modal, Form, Input, Select, mess
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UserOutlined, DollarOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -18,60 +19,22 @@ const AdminClientManagement = () => {
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
+  const fetchClients = async () => {
+    setLoading(true)
+    try {
+      const response = await api.get('/admin/dashboard')
+      const clientsData = response.data.data.clients || []
+      setClients(clientsData)
+    } catch (error) {
+      console.error('Erreur lors du chargement des clients:', error)
+      message.error('Erreur lors du chargement des clients')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    // TODO: Fetch clients from API
-    setClients([
-      {
-        id: 1,
-        name: 'Acme Corporation',
-        manager: 'John Doe',
-        email: 'john@acme.com',
-        phone: '+33 1 23 45 67 89',
-        subscription: 'Premium',
-        status: 'active',
-        users: 45,
-        resources: 12,
-        bookings: 234,
-        revenue: 12500,
-        quota: {
-          maxUsers: 100,
-          maxResources: 50,
-          maxBookings: 1000,
-        },
-        billing: {
-          plan: 'Premium',
-          price: 299,
-          billingCycle: 'monthly',
-          nextBilling: '2024-12-15',
-        },
-        createdAt: '2024-01-15',
-      },
-      {
-        id: 2,
-        name: 'TechStart Inc',
-        manager: 'Jane Smith',
-        email: 'jane@techstart.com',
-        phone: '+33 1 98 76 54 32',
-        subscription: 'Basic',
-        status: 'active',
-        users: 23,
-        resources: 8,
-        bookings: 156,
-        revenue: 7800,
-        quota: {
-          maxUsers: 50,
-          maxResources: 20,
-          maxBookings: 500,
-        },
-        billing: {
-          plan: 'Basic',
-          price: 99,
-          billingCycle: 'monthly',
-          nextBilling: '2024-12-20',
-        },
-        createdAt: '2024-02-20',
-      },
-    ])
+    fetchClients()
   }, [])
 
   const handleAdd = () => {
@@ -83,14 +46,22 @@ const AdminClientManagement = () => {
   const handleEdit = (client) => {
     setEditingClient(client)
     form.setFieldsValue({
-      name: client.name,
-      manager: client.manager,
+      name: client.name || client.manager + ' Organization',
+      manager: client.manager || client.name,
       email: client.email,
-      phone: client.phone,
-      subscription: client.subscription,
-      status: client.status,
-      quota: client.quota,
-      billing: client.billing,
+      phone: client.phone || '',
+      subscription: client.subscription || 'Basic',
+      status: client.status || 'active',
+      quota: client.quota || {
+        maxUsers: 50,
+        maxResources: 20,
+        maxBookings: 500,
+      },
+      billing: client.billing || {
+        plan: client.subscription || 'Basic',
+        price: 99,
+        billingCycle: 'monthly',
+      },
     })
     setIsModalVisible(true)
   }
@@ -98,14 +69,42 @@ const AdminClientManagement = () => {
   const handleSave = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call to save client
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      message.success(editingClient ? 'Client modifié avec succès' : 'Client créé avec succès')
+      if (editingClient) {
+        // Mise à jour du client
+        await api.put(`/users/${editingClient.id}`, {
+          name: values.manager,
+          email: values.email,
+          role: 'manager',
+          status: values.status || 'active',
+          quota: values.quota?.maxUsers || null,
+        })
+        message.success('Client modifié avec succès')
+      } else {
+        // Création d'un nouveau client (manager)
+        // Générer un mot de passe temporaire
+        const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'
+        
+        await api.post('/users', {
+          name: values.manager,
+          email: values.email,
+          password: tempPassword,
+          role: 'manager',
+          status: values.status || 'active',
+          quota: values.quota?.maxUsers || null,
+        })
+        message.success('Client créé avec succès')
+      }
+      
       setIsModalVisible(false)
       setEditingClient(null)
       form.resetFields()
+      
+      // Recharger la liste des clients
+      await fetchClients()
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur lors de la sauvegarde:', error)
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.email?.[0] || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -115,9 +114,15 @@ const AdminClientManagement = () => {
     Modal.confirm({
       title: 'Suspendre le client',
       content: 'Êtes-vous sûr de vouloir suspendre ce client ?',
-      onOk: () => {
-        message.success('Client suspendu')
-        // TODO: API call
+      onOk: async () => {
+        try {
+          await api.put(`/users/${id}`, { status: 'inactive' })
+          message.success('Client suspendu')
+          await fetchClients()
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors de la suspension')
+        }
       },
     })
   }
@@ -126,9 +131,15 @@ const AdminClientManagement = () => {
     Modal.confirm({
       title: 'Activer le client',
       content: 'Êtes-vous sûr de vouloir activer ce client ?',
-      onOk: () => {
-        message.success('Client activé')
-        // TODO: API call
+      onOk: async () => {
+        try {
+          await api.put(`/users/${id}`, { status: 'active' })
+          message.success('Client activé')
+          await fetchClients()
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors de l\'activation')
+        }
       },
     })
   }
@@ -139,9 +150,15 @@ const AdminClientManagement = () => {
       content: 'Cette action est irréversible. Êtes-vous sûr de vouloir supprimer ce client ?',
       okText: 'Supprimer',
       okType: 'danger',
-      onOk: () => {
-        message.success('Client supprimé')
-        // TODO: API call
+      onOk: async () => {
+        try {
+          await api.delete(`/users/${id}`)
+          message.success('Client supprimé')
+          await fetchClients()
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors de la suppression')
+        }
       },
     })
   }
@@ -150,31 +167,60 @@ const AdminClientManagement = () => {
     Modal.confirm({
       title: 'Réinitialiser l\'accès',
       content: 'Un email avec un nouveau mot de passe sera envoyé au manager. Continuer ?',
-      onOk: () => {
-        message.success('Email de réinitialisation envoyé')
-        // TODO: API call
+      onOk: async () => {
+        try {
+          const response = await api.post(`/users/${id}/reset-password`, {
+            send_email: false, // Pour l'instant, on retourne juste le mot de passe
+          })
+          message.success(`Mot de passe réinitialisé. Nouveau mot de passe: ${response.data.temp_password}`)
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors de la réinitialisation')
+        }
       },
     })
   }
 
-  const handleImpersonate = (client) => {
+  const handleImpersonate = async (client) => {
     Modal.confirm({
       title: 'Impersonifier le client',
-      content: `Vous allez vous connecter en tant que ${client.manager} (${client.name}). Continuer ?`,
-      onOk: () => {
-        // TODO: API call to impersonate, then redirect to manager dashboard
-        message.success(`Connecté en tant que ${client.manager}`)
-        // navigate('/manager') // Will be handled by backend
+      content: `Vous allez vous connecter en tant que ${client.manager || client.name} (${client.name}). Continuer ?`,
+      onOk: async () => {
+        try {
+          const response = await api.post(`/users/${client.id}/impersonate`)
+          const { token, redirect_url } = response.data
+          
+          // Stocker le token d'impersonation temporairement
+          localStorage.setItem('impersonation_token', token)
+          localStorage.setItem('original_token', localStorage.getItem('token'))
+          
+          // Mettre à jour le token dans l'API
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+          localStorage.setItem('token', token)
+          
+          message.success(`Connecté en tant que ${client.manager || client.name}`)
+          
+          // Rediriger vers le dashboard approprié
+          if (redirect_url) {
+            window.location.href = redirect_url
+          } else {
+            navigate('/manager')
+          }
+        } catch (error) {
+          console.error('Erreur:', error)
+          const errorMessage = error.response?.data?.message || 'Erreur lors de l\'impersonation'
+          message.error(errorMessage)
+        }
       },
     })
   }
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = !searchText || 
-      client.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchText.toLowerCase()) ||
-      client.manager.toLowerCase().includes(searchText.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || client.status === statusFilter
+      (client.name && client.name.toLowerCase().includes(searchText.toLowerCase())) ||
+      (client.email && client.email.toLowerCase().includes(searchText.toLowerCase())) ||
+      (client.manager && client.manager.toLowerCase().includes(searchText.toLowerCase()))
+    const matchesStatus = statusFilter === 'all' || (client.status === statusFilter)
     return matchesSearch && matchesStatus
   })
 
@@ -225,10 +271,10 @@ const AdminClientManagement = () => {
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <Text style={{ fontSize: 12 }}>
-            {record.users}/{record.quota.maxUsers} utilisateurs
+            {record.users || 0}/{record.quota?.maxUsers || 'N/A'} utilisateurs
           </Text>
           <Text style={{ fontSize: 12 }}>
-            {record.resources}/{record.quota.maxResources} ressources
+            {record.resources || 0}/{record.quota?.maxResources || 'N/A'} ressources
           </Text>
         </Space>
       ),
@@ -237,7 +283,7 @@ const AdminClientManagement = () => {
       title: 'Revenus',
       dataIndex: 'revenue',
       key: 'revenue',
-      render: (revenue) => `${revenue.toLocaleString()} €`,
+      render: (revenue) => revenue ? `${revenue.toLocaleString()} €` : '0 €',
     },
     {
       title: 'Actions',

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Typography, Table, Tag, Button, Space, Input, Select, DatePicker, Row, Col, Statistic, Modal, Form, message, Tabs, List, Avatar, Divider, Alert } from 'antd'
 import { SearchOutlined, ReloadOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, PlusOutlined, FileTextOutlined, QuestionCircleOutlined, BookOutlined, UserAddOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { Search } = Input
@@ -21,100 +22,83 @@ const AdminSupport = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
 
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      // Fetch tickets
+      const ticketsResponse = await api.get('/support/tickets', {
+        params: {
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+        }
+      })
+      const ticketsData = (ticketsResponse.data.data || []).map(ticket => ({
+        id: ticket.id,
+        clientId: ticket.user_id,
+        clientName: ticket.user?.name || 'Unknown',
+        subject: ticket.subject,
+        message: ticket.message,
+        status: ticket.status,
+        priority: ticket.priority,
+        category: ticket.category,
+        createdAt: ticket.created_at,
+        updatedAt: ticket.updated_at,
+        assignedTo: ticket.assigned_user?.name || ticket.assigned_to || null,
+      }))
+      setTickets(ticketsData)
+
+      // Fetch FAQs
+      const faqsResponse = await api.get('/support/faqs')
+      setFaqs(faqsResponse.data.data || [])
+
+      // Documentation reste mockée pour l'instant
+      setDocumentation([
+        { id: 1, title: 'Guide de démarrage', category: 'getting_started', views: 1200 },
+        { id: 2, title: 'API Documentation', category: 'api', views: 890 },
+        { id: 3, title: 'Gestion des clients', category: 'admin', views: 650 },
+        { id: 4, title: 'Configuration de la plateforme', category: 'configuration', views: 420 },
+      ])
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error)
+      message.error('Erreur lors du chargement des données')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    // TODO: Fetch from API
-    setTickets([
-      {
-        id: 1,
-        clientId: 1,
-        clientName: 'Acme Corporation',
-        subject: 'Problème de connexion API',
-        message: 'Nous rencontrons des erreurs lors de l\'appel à l\'API de réservation...',
-        status: 'open',
-        priority: 'high',
-        category: 'technical',
-        createdAt: '2024-12-10T10:00:00',
-        updatedAt: '2024-12-10T14:30:00',
-        assignedTo: 'Admin Support',
-      },
-      {
-        id: 2,
-        clientId: 2,
-        clientName: 'TechStart Inc',
-        subject: 'Question sur la facturation',
-        message: 'Comment puis-je modifier mon plan d\'abonnement ?',
-        status: 'in_progress',
-        priority: 'medium',
-        category: 'billing',
-        createdAt: '2024-12-09T15:20:00',
-        updatedAt: '2024-12-10T09:15:00',
-        assignedTo: 'Admin Support',
-      },
-      {
-        id: 3,
-        clientId: 3,
-        clientName: 'Global Services',
-        subject: 'Demande de fonctionnalité',
-        message: 'Serait-il possible d\'ajouter une fonctionnalité d\'export Excel ?',
-        status: 'closed',
-        priority: 'low',
-        category: 'feature_request',
-        createdAt: '2024-12-08T11:00:00',
-        updatedAt: '2024-12-09T16:00:00',
-        assignedTo: 'Admin Support',
-      },
-    ])
-
-    setFaqs([
-      {
-        id: 1,
-        question: 'Comment créer un nouveau client ?',
-        answer: 'Allez dans Gestion des clients > Onboarder un nouveau client. Remplissez le formulaire et validez.',
-        category: 'onboarding',
-        views: 245,
-        helpful: 12,
-      },
-      {
-        id: 2,
-        question: 'Comment modifier un plan d\'abonnement ?',
-        answer: 'Dans Gestion des clients, sélectionnez le client, puis modifiez son plan dans la section Facturation.',
-        category: 'billing',
-        views: 189,
-        helpful: 8,
-      },
-      {
-        id: 3,
-        question: 'Comment réinitialiser le mot de passe d\'un manager ?',
-        answer: 'Dans Gestion des clients, sélectionnez le client et cliquez sur "Réinitialiser l\'accès".',
-        category: 'account',
-        views: 156,
-        helpful: 5,
-      },
-    ])
-
-    setDocumentation([
-      { id: 1, title: 'Guide de démarrage', category: 'getting_started', views: 1200 },
-      { id: 2, title: 'API Documentation', category: 'api', views: 890 },
-      { id: 3, title: 'Gestion des clients', category: 'admin', views: 650 },
-      { id: 4, title: 'Configuration de la plateforme', category: 'configuration', views: 420 },
-    ])
-  }, [])
+    fetchData()
+  }, [statusFilter, priorityFilter])
 
   const handleViewTicket = (ticket) => {
     setSelectedTicket(ticket)
     setIsTicketModalVisible(true)
   }
 
-  const handleUpdateTicketStatus = (ticketId, newStatus) => {
-    // TODO: API call
-    message.success('Statut mis à jour')
-    setTickets(tickets.map(t => t.id === ticketId ? { ...t, status: newStatus } : t))
+  const handleUpdateTicketStatus = async (ticketId, newStatus) => {
+    try {
+      await api.put(`/support/tickets/${ticketId}/status`, {
+        status: newStatus,
+      })
+      message.success('Statut mis à jour')
+      await fetchData()
+    } catch (error) {
+      console.error('Erreur:', error)
+      message.error('Erreur lors de la mise à jour')
+    }
   }
 
-  const handleAssignTicket = (ticketId, assignee) => {
-    // TODO: API call
-    message.success('Ticket assigné')
-    setTickets(tickets.map(t => t.id === ticketId ? { ...t, assignedTo: assignee } : t))
+  const handleAssignTicket = async (ticketId, assigneeId) => {
+    try {
+      await api.put(`/support/tickets/${ticketId}/assign`, {
+        assigned_to: assigneeId,
+      })
+      message.success('Ticket assigné')
+      await fetchData()
+    } catch (error) {
+      console.error('Erreur:', error)
+      message.error('Erreur lors de l\'assignation')
+    }
   }
 
   const handleAddFaq = () => {
@@ -125,13 +109,20 @@ const AdminSupport = () => {
   const handleSaveFaq = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post('/support/faqs', {
+        question: values.question,
+        answer: values.answer,
+        category: values.category || null,
+        order: values.order || 0,
+      })
       message.success('FAQ ajoutée')
       setIsFaqModalVisible(false)
       faqForm.resetFields()
+      await fetchData()
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -141,9 +132,19 @@ const AdminSupport = () => {
     Modal.confirm({
       title: `Effectuer l'action: ${action}`,
       content: `Êtes-vous sûr de vouloir ${action} ${ticketIds.length} ticket(s) ?`,
-      onOk: () => {
-        message.success('Action effectuée')
-        // TODO: API call
+      onOk: async () => {
+        try {
+          await api.post('/support/tickets/bulk-action', {
+            ticket_ids: ticketIds,
+            action: action,
+            assigned_to: action === 'assign' ? 1 : undefined, // TODO: Get from user selection
+          })
+          message.success('Action effectuée')
+          await fetchData()
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors de l\'action')
+        }
       },
     })
   }

@@ -27,7 +27,26 @@ class ErrorBoundary extends React.Component {
   }
 
   handleGoHome = () => {
-    window.location.href = '/home'
+    // Vérifier si l'utilisateur est authentifié pour rediriger vers le bon dashboard
+    const auth = localStorage.getItem('auth')
+    if (auth) {
+      try {
+        const { user } = JSON.parse(auth)
+        if (user?.role === 'admin') {
+          window.location.href = '/admin'
+        } else if (user?.role === 'manager') {
+          window.location.href = '/manager'
+        } else if (user) {
+          window.location.href = '/dashboard'
+        } else {
+          window.location.href = '/home'
+        }
+      } catch (e) {
+        window.location.href = '/home'
+      }
+    } else {
+      window.location.href = '/home'
+    }
   }
 
   render() {

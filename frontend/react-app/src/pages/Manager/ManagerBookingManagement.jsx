@@ -3,6 +3,7 @@ import { Table, Typography, Button, Tag, Space, Modal, message, Input, Select, D
 import { CheckOutlined, CloseOutlined, EditOutlined, DeleteOutlined, SearchOutlined, BookOutlined, WarningOutlined, PlusOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchBookings, approveBooking, cancelBooking } from '../../store/slices/bookingsSlice'
+import { fetchResources } from '../../store/slices/resourcesSlice'
 import BookingForm from '../../components/Bookings/BookingForm'
 import dayjs from 'dayjs'
 
@@ -25,9 +26,16 @@ const ManagerBookingManagement = () => {
     dispatch(fetchBookings())
   }, [dispatch])
 
-  const handleApprove = (id) => {
-    dispatch(approveBooking(id))
-    message.success('Réservation approuvée')
+  const handleApprove = async (id) => {
+    try {
+      await dispatch(approveBooking(id)).unwrap()
+      message.success('Réservation approuvée')
+      // Rafraîchir les ressources pour mettre à jour leur statut
+      dispatch(fetchResources())
+      dispatch(fetchBookings())
+    } catch (error) {
+      message.error('Erreur lors de l\'approbation')
+    }
   }
 
   const handleReject = (id) => {
@@ -36,9 +44,15 @@ const ManagerBookingManagement = () => {
       content: 'Êtes-vous sûr de vouloir refuser cette réservation ?',
       okText: 'Refuser',
       okType: 'danger',
-      onOk: () => {
-        // TODO: Implémenter rejectBooking dans le slice
-        message.success('Réservation refusée')
+      onOk: async () => {
+        try {
+          // TODO: Implémenter rejectBooking dans le slice
+          message.success('Réservation refusée')
+          dispatch(fetchResources())
+          dispatch(fetchBookings())
+        } catch (error) {
+          message.error('Erreur lors du refus')
+        }
       },
     })
   }
@@ -49,9 +63,16 @@ const ManagerBookingManagement = () => {
       content: 'Êtes-vous sûr de vouloir annuler cette réservation ?',
       okText: 'Annuler',
       okType: 'danger',
-      onOk: () => {
-        dispatch(cancelBooking(id))
-        message.success('Réservation annulée')
+      onOk: async () => {
+        try {
+          await dispatch(cancelBooking(id)).unwrap()
+          message.success('Réservation annulée')
+          // Rafraîchir les ressources pour mettre à jour leur statut
+          dispatch(fetchResources())
+          dispatch(fetchBookings())
+        } catch (error) {
+          message.error('Erreur lors de l\'annulation')
+        }
       },
     })
   }
@@ -369,6 +390,7 @@ const ManagerBookingManagement = () => {
             setIsModalVisible(false)
             setEditingBooking(null)
             dispatch(fetchBookings())
+            dispatch(fetchResources())
             message.success(editingBooking ? 'Réservation modifiée avec succès' : 'Réservation créée avec succès')
           }}
         />

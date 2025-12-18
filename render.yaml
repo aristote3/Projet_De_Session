@@ -1,0 +1,102 @@
+services:
+  # Backend Service (Laravel)
+  - type: web
+    name: youmanage-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: info
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: youmanage-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: youmanage-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: youmanage-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: youmanage-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: youmanage-db
+          property: password
+      - key: REDIS_HOST
+        fromService:
+          name: youmanage-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: youmanage-redis
+          type: redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          name: youmanage-redis
+          type: redis
+          property: password
+      - key: APP_URL
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          name: youmanage-frontend
+          type: web
+          property: host
+      - key: SANCTUM_STATEFUL_DOMAINS
+        fromService:
+          name: youmanage-frontend
+          type: web
+          property: host
+      - key: SESSION_DOMAIN
+        fromService:
+          name: youmanage-frontend
+          type: web
+          property: host
+      - key: CACHE_DRIVER
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+
+  # Frontend Service (React)
+  - type: web
+    name: youmanage-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/react-app/Dockerfile
+    dockerContext: ./frontend/react-app
+    plan: starter
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: youmanage-backend
+          type: web
+          property: host
+        value: https://youmanage-backend.onrender.com/api
+
+  # PostgreSQL Database
+  - type: pspg
+    name: youmanage-db
+    plan: starter
+    databaseName: youmanage
+    user: youmanage
+
+  # Redis Cache
+  - type: redis
+    name: youmanage-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+

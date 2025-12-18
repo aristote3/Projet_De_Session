@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Typography, Form, Input, Button, Switch, Select, InputNumber, message, Row, Col, Divider, Tabs, Space, Tag, Modal, Alert } from 'antd'
 import { SaveOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -35,19 +36,30 @@ const AdminPlatformSettings = () => {
   })
 
   useEffect(() => {
-    // TODO: Fetch settings from API
-    form.setFieldsValue(settings)
-  }, [])
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/settings/platform')
+        const platformSettings = response.data.data || settings
+        setSettings(platformSettings)
+        form.setFieldsValue(platformSettings)
+      } catch (error) {
+        console.error('Erreur lors du chargement des paramètres:', error)
+        form.setFieldsValue(settings)
+      }
+    }
+    fetchSettings()
+  }, [form])
 
   const handleSave = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call to save settings
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post('/settings/platform', values)
       message.success('Paramètres sauvegardés')
       setSettings(values)
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }

@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, Typography, Form, Switch, Input, Button, Space, Divider, Alert, message, InputNumber, DatePicker, Select, Row, Col, Tabs, TimePicker, List, Modal } from 'antd'
 import { SettingOutlined, BellOutlined, SaveOutlined, ClockCircleOutlined, CalendarOutlined, UserOutlined } from '@ant-design/icons'
 import { useSelector } from 'react-redux'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -14,15 +15,31 @@ const ManagerBusinessSettings = () => {
   const [loading, setLoading] = useState(false)
   const [holidays, setHolidays] = useState([])
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/settings/business')
+        const settings = response.data.data || {}
+        form.setFieldsValue(settings)
+        if (settings.holidays) {
+          setHolidays(settings.holidays)
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des paramètres:', error)
+      }
+    }
+    fetchSettings()
+  }, [form])
+
   const handleSave = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call to save business settings
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post('/settings/business', values)
       message.success('Paramètres business sauvegardés avec succès')
-      console.log('Business settings saved:', values)
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }

@@ -8,11 +8,12 @@ class VerifyCsrfToken extends Middleware
 {
     /**
      * The URIs that should be excluded from CSRF verification.
+     * API routes use Sanctum tokens, so they don't need CSRF protection
      *
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'api/*', // API routes use Sanctum authentication, not CSRF
     ];
 }
 

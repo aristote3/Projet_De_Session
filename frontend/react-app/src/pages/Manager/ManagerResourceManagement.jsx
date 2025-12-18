@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { Card, Row, Col, Typography, Button, Table, Tag, Modal, Space, Input, Select, Switch, message, InputNumber, TimePicker, Divider, Tabs, Form } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, AppstoreOutlined, SettingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
-import { fetchResources, deleteResource } from '../../store/slices/resourcesSlice'
+import { fetchResources, deleteResource, createResource, updateResource } from '../../store/slices/resourcesSlice'
+import { useResourcePolling } from '../../hooks/useResourcePolling'
 import dayjs from 'dayjs'
 
 const { Title, Text } = Typography
@@ -18,9 +19,8 @@ const ManagerResourceManagement = () => {
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  useEffect(() => {
-    dispatch(fetchResources())
-  }, [dispatch])
+  // Polling automatique toutes les 30 secondes pour mettre à jour les ressources en temps réel
+  useResourcePolling(30, true)
 
   const handleAdd = () => {
     setEditingResource(null)
@@ -32,6 +32,8 @@ const ManagerResourceManagement = () => {
     setEditingResource(resource)
     form.setFieldsValue({
       ...resource,
+      // Mapper la catégorie backend vers frontend pour l'affichage
+      category: mapCategoryFromBackend(resource.category),
       opening_hours_start: resource.opening_hours_start ? dayjs(resource.opening_hours_start, 'HH:mm') : null,
       opening_hours_end: resource.opening_hours_end ? dayjs(resource.opening_hours_end, 'HH:mm') : null,
       booking_rules: resource.booking_rules || {
@@ -45,25 +47,101 @@ const ManagerResourceManagement = () => {
     setIsModalVisible(true)
   }
 
+  // Mapping des catégories frontend vers backend
+  const mapCategoryToBackend = (category) => {
+    const categoryMap = {
+      'Salle de réunion': 'salle',
+      'Salle de conférence': 'salle',
+      'Équipement': 'equipement',
+      'Véhicule': 'vehicule',
+      'Service': 'service',
+      'Personnel': 'service',
+      'Créneau horaire': 'service',
+    }
+    return categoryMap[category] || 'salle'
+  }
+
+  // Mapping inverse pour l'affichage
+  const mapCategoryFromBackend = (category) => {
+    const reverseMap = {
+      'salle': 'Salle de réunion',
+      'equipement': 'Équipement',
+      'vehicule': 'Véhicule',
+      'service': 'Service',
+    }
+    return reverseMap[category] || category
+  }
+
   const handleSave = async (values) => {
     try {
-      // TODO: API call to save resource
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      message.success(editingResource ? 'Ressource modifiée avec succès' : 'Ressource créée avec succès')
+      // Préparer les données pour l'API
+      const resourceData = {
+        name: values.name,
+        category: mapCategoryToBackend(values.category),
+        description: values.description || null,
+        capacity: values.capacity || 1,
+        image_url: values.image_url || null,
+        status: values.status || 'available',
+        pricing_type: values.pricing_type || 'gratuit',
+        price: values.price || 0,
+        equipments: values.equipments || null,
+        // Formater les horaires en format H:i
+        opening_hours_start: values.opening_hours_start 
+          ? values.opening_hours_start.format('HH:mm') 
+          : '08:00',
+        opening_hours_end: values.opening_hours_end 
+          ? values.opening_hours_end.format('HH:mm') 
+          : '18:00',
+      }
+
+      if (editingResource) {
+        // Mise à jour
+        await dispatch(updateResource({ id: editingResource.id, data: resourceData })).unwrap()
+        message.success('Ressource modifiée avec succès')
+      } else {
+        // Création
+        await dispatch(createResource(resourceData)).unwrap()
+        message.success('Ressource créée avec succès')
+      }
+
       setIsModalVisible(false)
       setEditingResource(null)
       form.resetFields()
+      // Rafraîchir la liste
       dispatch(fetchResources())
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur lors de la sauvegarde:', error)
+      // Gérer spécifiquement les erreurs 403
+      if (error?.response?.status === 403 || error?.message?.includes('permission')) {
+        message.error('Vous n\'avez pas la permission d\'effectuer cette action. Seuls les managers et administrateurs peuvent gérer les ressources.')
+      } else {
+        const errorMessage = error?.response?.data?.message || error?.message || 'Erreur lors de la sauvegarde'
+        message.error(errorMessage)
+      }
     }
   }
 
-  const handleToggleStatus = (id, currentStatus) => {
-    const newStatus = currentStatus === 'available' ? 'unavailable' : 'available'
-    // TODO: API call to update status
-    message.success(`Ressource ${newStatus === 'available' ? 'activée' : 'désactivée'}`)
-    dispatch(fetchResources())
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'available' ? 'maintenance' : 'available'
+      const resource = resources.find(r => r.id === id)
+      if (resource) {
+        await dispatch(updateResource({ 
+          id, 
+          data: { ...resource, status: newStatus } 
+        })).unwrap()
+        message.success(`Ressource ${newStatus === 'available' ? 'activée' : 'mise en maintenance'}`)
+        dispatch(fetchResources())
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error)
+      // Gérer spécifiquement les erreurs 403
+      if (error?.response?.status === 403 || error?.message?.includes('permission')) {
+        message.error('Vous n\'avez pas la permission de modifier le statut de cette ressource.')
+      } else {
+        message.error('Erreur lors de la mise à jour du statut')
+      }
+    }
   }
 
   const handleDelete = (id) => {
@@ -72,9 +150,21 @@ const ManagerResourceManagement = () => {
       content: 'Êtes-vous sûr de vouloir supprimer cette ressource ?',
       okText: 'Supprimer',
       okType: 'danger',
-      onOk: () => {
-        dispatch(deleteResource(id))
-        message.success('Ressource supprimée')
+      onOk: async () => {
+        try {
+          await dispatch(deleteResource(id)).unwrap()
+          message.success('Ressource supprimée')
+          dispatch(fetchResources())
+        } catch (error) {
+          console.error('Erreur lors de la suppression:', error)
+          // Gérer spécifiquement les erreurs 403
+          if (error?.response?.status === 403 || error?.message?.includes('permission')) {
+            message.error('Vous n\'avez pas la permission de supprimer cette ressource.')
+          } else {
+            const errorMessage = error?.response?.data?.message || error?.message || 'Erreur lors de la suppression'
+            message.error(errorMessage)
+          }
+        }
       },
     })
   }
@@ -97,7 +187,7 @@ const ManagerResourceManagement = () => {
       title: 'Catégorie',
       dataIndex: 'category',
       key: 'category',
-      render: (category) => <Tag color="blue">{category || 'Non spécifié'}</Tag>,
+      render: (category) => <Tag color="blue">{mapCategoryFromBackend(category) || 'Non spécifié'}</Tag>,
     },
     {
       title: 'Statut',
@@ -173,8 +263,6 @@ const ManagerResourceManagement = () => {
               <Select.Option value="Équipement">Équipement</Select.Option>
               <Select.Option value="Véhicule">Véhicule</Select.Option>
               <Select.Option value="Service">Service</Select.Option>
-              <Select.Option value="Personnel">Personnel</Select.Option>
-              <Select.Option value="Créneau horaire">Créneau horaire</Select.Option>
             </Select>
           </Form.Item>
 
@@ -215,7 +303,6 @@ const ManagerResourceManagement = () => {
               <Select.Option value="available">Disponible</Select.Option>
               <Select.Option value="busy">Occupé</Select.Option>
               <Select.Option value="maintenance">En maintenance</Select.Option>
-              <Select.Option value="unavailable">Indisponible</Select.Option>
             </Select>
           </Form.Item>
 

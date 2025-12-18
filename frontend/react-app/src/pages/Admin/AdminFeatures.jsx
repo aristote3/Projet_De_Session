@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Typography, Table, Tag, Button, Space, Switch, Input, Select, Modal, Form, message, Row, Col, Statistic, Alert, Divider, Timeline, Badge } from 'antd'
 import { ThunderboltOutlined, PlusOutlined, EditOutlined, DeleteOutlined, RocketOutlined, ExperimentOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -16,41 +17,25 @@ const AdminFeatures = () => {
   const [featureForm] = Form.useForm()
   const [releaseForm] = Form.useForm()
 
-  useEffect(() => {
-    // TODO: Fetch from API
-    setFeatures([
-      {
-        id: 1,
-        name: 'Export Excel',
-        key: 'export_excel',
-        description: 'Permet aux managers d\'exporter leurs données en Excel',
-        status: 'enabled',
-        rollout: 100,
-        targetTenants: 'all',
-        createdAt: '2024-11-15',
-      },
-      {
-        id: 2,
-        name: 'Notifications SMS',
-        key: 'sms_notifications',
-        description: 'Envoi de notifications par SMS',
-        status: 'beta',
-        rollout: 25,
-        targetTenants: 'premium',
-        createdAt: '2024-12-01',
-      },
-      {
-        id: 3,
-        name: 'API v2',
-        key: 'api_v2',
-        description: 'Nouvelle version de l\'API avec améliorations',
-        status: 'disabled',
-        rollout: 0,
-        targetTenants: 'none',
-        createdAt: '2024-10-20',
-      },
-    ])
+  const fetchData = async () => {
+    try {
+      const response = await api.get('/features')
+      const featuresData = (response.data.data || []).map(feature => ({
+        ...feature,
+        targetTenants: feature.target_tenants || feature.targetTenants,
+        createdAt: feature.created_at || feature.createdAt,
+      }))
+      setFeatures(featuresData)
+    } catch (error) {
+      console.error('Erreur lors du chargement des fonctionnalités:', error)
+      message.error('Erreur lors du chargement des fonctionnalités')
+    }
+  }
 
+  useEffect(() => {
+    fetchData()
+    
+    // Releases reste mocké pour l'instant (pas d'API encore)
     setReleases([
       {
         id: 1,
@@ -96,10 +81,17 @@ const AdminFeatures = () => {
     ])
   }, [])
 
-  const handleToggleFeature = (featureId, enabled) => {
-    // TODO: API call
-    message.success(`Fonctionnalité ${enabled ? 'activée' : 'désactivée'}`)
-    setFeatures(features.map(f => f.id === featureId ? { ...f, status: enabled ? 'enabled' : 'disabled' } : f))
+  const handleToggleFeature = async (featureId, enabled) => {
+    try {
+      await api.put(`/features/${featureId}`, {
+        status: enabled ? 'enabled' : 'disabled',
+      })
+      message.success(`Fonctionnalité ${enabled ? 'activée' : 'désactivée'}`)
+      await fetchData()
+    } catch (error) {
+      console.error('Erreur:', error)
+      message.error('Erreur lors de la modification')
+    }
   }
 
   const handleAddFeature = () => {
@@ -110,21 +102,53 @@ const AdminFeatures = () => {
 
   const handleEditFeature = (feature) => {
     setEditingFeature(feature)
-    featureForm.setFieldsValue(feature)
+    featureForm.setFieldsValue({
+      name: feature.name,
+      key: feature.key,
+      description: feature.description,
+      status: feature.status,
+      rollout: feature.rollout,
+      targetTenants: feature.target_tenants || feature.targetTenants,
+      config: feature.config || {},
+    })
     setIsFeatureModalVisible(true)
   }
 
   const handleSaveFeature = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      message.success(editingFeature ? 'Fonctionnalité modifiée' : 'Fonctionnalité créée')
+      if (editingFeature) {
+        await api.put(`/features/${editingFeature.id}`, {
+          name: values.name,
+          key: values.key,
+          description: values.description,
+          status: values.status || 'disabled',
+          rollout: values.rollout || 0,
+          target_tenants: values.targetTenants || 'all',
+          config: values.config || {},
+        })
+        message.success('Fonctionnalité modifiée')
+      } else {
+        await api.post('/features', {
+          name: values.name,
+          key: values.key,
+          description: values.description,
+          status: values.status || 'disabled',
+          rollout: values.rollout || 0,
+          target_tenants: values.targetTenants || 'all',
+          config: values.config || {},
+        })
+        message.success('Fonctionnalité créée')
+      }
+      
       setIsFeatureModalVisible(false)
       setEditingFeature(null)
       featureForm.resetFields()
+      await fetchData()
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.key?.[0] || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -239,6 +263,31 @@ const AdminFeatures = () => {
           />
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEditFeature(record)}>
             Modifier
+          </Button>
+          <Button 
+            size="small" 
+            danger 
+            icon={<DeleteOutlined />} 
+            onClick={async () => {
+              Modal.confirm({
+                title: 'Supprimer la fonctionnalité',
+                content: 'Êtes-vous sûr de vouloir supprimer cette fonctionnalité ?',
+                okText: 'Supprimer',
+                okType: 'danger',
+                onOk: async () => {
+                  try {
+                    await api.delete(`/features/${record.id}`)
+                    message.success('Fonctionnalité supprimée')
+                    await fetchData()
+                  } catch (error) {
+                    console.error('Erreur:', error)
+                    message.error('Erreur lors de la suppression')
+                  }
+                },
+              })
+            }}
+          >
+            Supprimer
           </Button>
         </Space>
       ),

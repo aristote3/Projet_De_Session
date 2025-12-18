@@ -57,9 +57,16 @@ class WaitingListController extends Controller
             ], 422);
         }
 
+        // Vérifier que l'utilisateur est authentifié
+        if (!auth()->check()) {
+            return response()->json([
+                'message' => 'Vous devez être connecté pour ajouter une entrée à la liste d\'attente'
+            ], 401);
+        }
+
         $waitingList = WaitingList::create([
             ...$validator->validated(),
-            'user_id' => auth()->id() ?? 1, // TODO: Use actual auth
+            'user_id' => auth()->id(),
             'status' => 'active',
         ]);
 

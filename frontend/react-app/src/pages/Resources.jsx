@@ -4,6 +4,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, ClockCircleOutlined, InfoCi
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { fetchResources, deleteResource } from '../store/slices/resourcesSlice'
+import { useResourcePolling } from '../hooks/useResourcePolling'
 import ResourceForm from '../components/Resources/ResourceForm'
 
 const { Title, Text } = Typography
@@ -21,9 +22,8 @@ const Resources = () => {
   // Vérifier si l'utilisateur peut gérer les ressources (admin ou manager)
   const canManageResources = user?.role === 'admin' || user?.role === 'manager'
 
-  useEffect(() => {
-    dispatch(fetchResources())
-  }, [dispatch])
+  // Polling automatique toutes les 30 secondes pour mettre à jour les ressources en temps réel
+  useResourcePolling(30, true)
 
   const handleAdd = () => {
     setEditingResource(null)

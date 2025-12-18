@@ -1,7 +1,7 @@
 # ============================================
-# YouManage Frontend - React Dockerfile
+# YouManage Frontend - React Dockerfile (Production)
 # ============================================
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -18,9 +18,24 @@ RUN npm ci
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 5173
+# Build the application
+RUN npm run build
 
-# Start development server with hot reload
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Production stage
+FROM node:20-alpine
+
+# Install serve globally
+RUN npm install -g serve
+
+# Set working directory
+WORKDIR /app
+
+# Copy built files from builder
+COPY --from=builder /app/dist ./dist
+
+# Expose port (Render utilise une variable PORT dynamique)
+EXPOSE ${PORT:-5173}
+
+# Start production server
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-5173}"]
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -9,16 +10,18 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, LogsActivity;
 
     protected $fillable = [
         'name',
         'email',
         'password',
+        'phone',
         'role',
         'group',
         'quota',
         'status',
+        'notification_preferences',
     ];
 
     protected $hidden = [
@@ -30,6 +33,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'quota' => 'integer',
+        'notification_preferences' => 'array',
     ];
 
     /**

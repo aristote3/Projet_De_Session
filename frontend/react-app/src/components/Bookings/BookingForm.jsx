@@ -4,6 +4,7 @@ import { useFormik } from 'formik'
 import * as Yup from 'yup'
 import { useDispatch, useSelector } from 'react-redux'
 import { createBooking, updateBooking } from '../../store/slices/bookingsSlice'
+import { fetchResources } from '../../store/slices/resourcesSlice'
 import dayjs from 'dayjs'
 
 const { RangePicker } = DatePicker
@@ -127,6 +128,8 @@ const BookingForm = ({ resources, initialDate, onSuccess, booking, initialResour
         } else {
           await dispatch(createBooking(backendData))
         }
+        // Rafraîchir les ressources pour mettre à jour leur statut
+        dispatch(fetchResources())
         onSuccess()
       } catch (error) {
         message.error('Erreur lors de la création de la réservation')

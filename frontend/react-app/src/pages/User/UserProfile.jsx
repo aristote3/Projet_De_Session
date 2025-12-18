@@ -3,6 +3,7 @@ import { Card, Typography, Form, Input, Button, Space, Upload, Avatar, message, 
 import { UserOutlined, CameraOutlined, SaveOutlined, LockOutlined, BellOutlined, MailOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { setUser } from '../../store/slices/authSlice'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 
@@ -33,18 +34,36 @@ const UserProfile = () => {
   const handleSaveProfile = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call to update profile
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await api.put(`/users/${user.id}/profile`, {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+      })
+      
+      // Mettre à jour les préférences de notification si elles ont changé
+      if (values.notifications) {
+        await api.put(`/users/${user.id}/notifications`, {
+          email: values.notifications.email,
+          sms: values.notifications.sms,
+          push: values.notifications.push,
+          bookingConfirmation: values.notifications.bookingConfirmation,
+          bookingReminder: values.notifications.bookingReminder,
+          bookingCancellation: values.notifications.bookingCancellation,
+        })
+      }
       
       dispatch(setUser({
         ...user,
-        ...values,
+        ...response.data.data,
         avatar: avatarUrl,
+        notification_preferences: values.notifications || user.notification_preferences,
       }))
       
       message.success('Profil mis à jour avec succès')
     } catch (error) {
-      message.error('Erreur lors de la mise à jour du profil')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.email?.[0] || 'Erreur lors de la mise à jour du profil'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -58,12 +77,18 @@ const UserProfile = () => {
 
     setLoading(true)
     try {
-      // TODO: API call to change password
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post(`/users/${user.id}/change-password`, {
+        current_password: values.currentPassword,
+        password: values.newPassword,
+        password_confirmation: values.confirmPassword,
+      })
+      
       message.success('Mot de passe modifié avec succès')
       passwordForm.resetFields()
     } catch (error) {
-      message.error('Erreur lors du changement de mot de passe')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.current_password?.[0] || 'Erreur lors du changement de mot de passe'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }

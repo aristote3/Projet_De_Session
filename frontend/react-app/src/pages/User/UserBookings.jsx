@@ -3,6 +3,7 @@ import { Table, Typography, Button, Tag, Space, Modal, message, Card, Row, Col, 
 import { BookOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, PrinterOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchBookings, cancelBooking } from '../../store/slices/bookingsSlice'
+import { fetchResources } from '../../store/slices/resourcesSlice'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import BookingForm from '../../components/Bookings/BookingForm'
 import dayjs from 'dayjs'
@@ -56,9 +57,16 @@ const UserBookings = () => {
     }
   })
 
-  const handleCancel = (id) => {
-    dispatch(cancelBooking(id))
-    message.success('Réservation annulée')
+  const handleCancel = async (id) => {
+    try {
+      await dispatch(cancelBooking(id)).unwrap()
+      message.success('Réservation annulée')
+      // Rafraîchir les ressources pour mettre à jour leur statut
+      dispatch(fetchResources())
+      dispatch(fetchBookings())
+    } catch (error) {
+      message.error('Erreur lors de l\'annulation')
+    }
   }
 
   const handleModify = (booking) => {
@@ -358,6 +366,7 @@ const UserBookings = () => {
             setIsModalVisible(false)
             setEditingBooking(null)
             dispatch(fetchBookings())
+            dispatch(fetchResources())
             message.success(editingBooking ? 'Réservation modifiée avec succès' : 'Réservation créée avec succès')
             if (searchParams.get('resource')) {
               navigate('/bookings')

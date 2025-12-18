@@ -7,6 +7,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchBookings } from '../store/slices/bookingsSlice'
 import { fetchResources } from '../store/slices/resourcesSlice'
+import { useResourcePolling } from '../hooks/useResourcePolling'
 import BookingForm from '../components/Bookings/BookingForm'
 import dayjs from 'dayjs'
 
@@ -22,8 +23,10 @@ const CalendarView = () => {
 
   useEffect(() => {
     dispatch(fetchBookings())
-    dispatch(fetchResources())
   }, [dispatch])
+
+  // Polling automatique toutes les 30 secondes pour mettre à jour les ressources en temps réel
+  useResourcePolling(30, true)
 
   // Combiner date + start_time/end_time pour créer des dates ISO complètes pour FullCalendar
   const events = bookings.map(booking => {
@@ -108,6 +111,7 @@ const CalendarView = () => {
             onSuccess={() => {
               setIsModalVisible(false)
               dispatch(fetchBookings())
+              dispatch(fetchResources())
             }}
           />
         )}

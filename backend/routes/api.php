@@ -70,6 +70,9 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
         Route::get('/{user}', [\App\Http\Controllers\Api\UserController::class, 'show']);
         Route::put('/{user}', [\App\Http\Controllers\Api\UserController::class, 'update']);
         Route::put('/{user}/profile', [\App\Http\Controllers\Api\UserController::class, 'updateProfile']);
+        Route::post('/{user}/change-password', [\App\Http\Controllers\Api\UserController::class, 'changePassword']);
+        Route::post('/{user}/reset-password', [\App\Http\Controllers\Api\UserController::class, 'resetPassword']);
+        Route::post('/{user}/impersonate', [\App\Http\Controllers\Api\UserController::class, 'impersonate']);
         Route::get('/{user}/history', [\App\Http\Controllers\Api\UserController::class, 'bookingHistory']);
         Route::post('/{user}/credits', [\App\Http\Controllers\Api\UserController::class, 'addCredits']);
         Route::get('/{user}/credits', [\App\Http\Controllers\Api\UserController::class, 'getCredits']);
@@ -100,11 +103,40 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
         Route::post('/business-rules', [\App\Http\Controllers\Api\AdminController::class, 'createBusinessRule']);
         Route::put('/business-rules/{businessRule}', [\App\Http\Controllers\Api\AdminController::class, 'updateBusinessRule']);
         Route::get('/audit-trail', [\App\Http\Controllers\Api\AdminController::class, 'auditTrail']);
+        Route::get('/error-logs', [\App\Http\Controllers\Api\AdminController::class, 'errorLogs']);
+        Route::get('/api-usage', [\App\Http\Controllers\Api\AdminController::class, 'apiUsage']);
+        Route::get('/security-events', [\App\Http\Controllers\Api\AdminController::class, 'securityEvents']);
         
         // Gestion des demandes de comptes en attente
         Route::get('/pending-requests', [\App\Http\Controllers\Api\UserController::class, 'pendingRequests']);
         Route::post('/users/{user}/approve', [\App\Http\Controllers\Api\UserController::class, 'approveRequest']);
         Route::post('/users/{user}/reject', [\App\Http\Controllers\Api\UserController::class, 'rejectRequest']);
+    });
+
+    // Billing
+    Route::prefix('billing')->group(function () {
+        Route::get('/plans', [\App\Http\Controllers\Api\BillingController::class, 'getPlans']);
+        Route::post('/plans', [\App\Http\Controllers\Api\BillingController::class, 'createPlan']);
+        Route::put('/plans/{plan}', [\App\Http\Controllers\Api\BillingController::class, 'updatePlan']);
+        Route::delete('/plans/{plan}', [\App\Http\Controllers\Api\BillingController::class, 'deletePlan']);
+        Route::get('/subscriptions', [\App\Http\Controllers\Api\BillingController::class, 'getSubscriptions']);
+        Route::get('/invoices', [\App\Http\Controllers\Api\BillingController::class, 'getInvoices']);
+        Route::post('/invoices', [\App\Http\Controllers\Api\BillingController::class, 'createInvoice']);
+        Route::post('/invoices/{invoice}/refund', [\App\Http\Controllers\Api\BillingController::class, 'refundInvoice']);
+        Route::post('/subscriptions/{subscription}/discount', [\App\Http\Controllers\Api\BillingController::class, 'applyDiscount']);
+    });
+
+    // Support
+    Route::prefix('support')->group(function () {
+        Route::get('/tickets', [\App\Http\Controllers\Api\SupportController::class, 'getTickets']);
+        Route::post('/tickets', [\App\Http\Controllers\Api\SupportController::class, 'createTicket']);
+        Route::put('/tickets/{ticket}/status', [\App\Http\Controllers\Api\SupportController::class, 'updateTicketStatus']);
+        Route::put('/tickets/{ticket}/assign', [\App\Http\Controllers\Api\SupportController::class, 'assignTicket']);
+        Route::post('/tickets/bulk-action', [\App\Http\Controllers\Api\SupportController::class, 'bulkAction']);
+        Route::get('/faqs', [\App\Http\Controllers\Api\SupportController::class, 'getFaqs']);
+        Route::post('/faqs', [\App\Http\Controllers\Api\SupportController::class, 'createFaq']);
+        Route::put('/faqs/{faq}', [\App\Http\Controllers\Api\SupportController::class, 'updateFaq']);
+        Route::delete('/faqs/{faq}', [\App\Http\Controllers\Api\SupportController::class, 'deleteFaq']);
     });
 
     // Messages & Broadcast
@@ -116,6 +148,30 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
         Route::post('/broadcast', [\App\Http\Controllers\Api\MessageController::class, 'broadcast']);
         Route::post('/{message}/read', [\App\Http\Controllers\Api\MessageController::class, 'markAsRead']);
         Route::delete('/{message}', [\App\Http\Controllers\Api\MessageController::class, 'destroy']);
+    });
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+        Route::get('/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+        Route::post('/{notification}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+        Route::post('/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+    });
+
+    // Settings
+    Route::prefix('settings')->group(function () {
+        Route::get('/business', [\App\Http\Controllers\Api\SettingsController::class, 'getBusinessSettings']);
+        Route::post('/business', [\App\Http\Controllers\Api\SettingsController::class, 'saveBusinessSettings']);
+        Route::get('/platform', [\App\Http\Controllers\Api\SettingsController::class, 'getPlatformSettings']);
+        Route::post('/platform', [\App\Http\Controllers\Api\SettingsController::class, 'savePlatformSettings']);
+    });
+
+    // Features (admin only)
+    Route::prefix('features')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\FeatureController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\FeatureController::class, 'store']);
+        Route::put('/{feature}', [\App\Http\Controllers\Api\FeatureController::class, 'update']);
+        Route::delete('/{feature}', [\App\Http\Controllers\Api\FeatureController::class, 'destroy']);
     });
 });
 

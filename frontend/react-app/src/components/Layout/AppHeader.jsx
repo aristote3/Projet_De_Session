@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Layout, Avatar, Dropdown, Space, Badge } from 'antd'
 import { BellOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons'
 import { useSelector, useDispatch } from 'react-redux'
@@ -15,6 +15,25 @@ const AppHeader = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { isDarkMode, theme } = useTheme()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await api.get('/notifications/unread-count')
+        setUnreadCount(response.data.count || 0)
+      } catch (error) {
+        console.error('Erreur lors du chargement du nombre de notifications:', error)
+      }
+    }
+
+    if (user) {
+      fetchUnreadCount()
+      // Rafraîchir toutes les 30 secondes
+      const interval = setInterval(fetchUnreadCount, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [user])
 
   const handleLogout = async () => {
     try {
@@ -82,8 +101,11 @@ const AppHeader = () => {
       </div>
       <Space size="large">
         <ThemeToggle />
-        <Badge count={5}>
-          <BellOutlined style={{ fontSize: '20px', cursor: 'pointer', color: theme.colorText }} />
+        <Badge count={unreadCount}>
+          <BellOutlined 
+            style={{ fontSize: '20px', cursor: 'pointer', color: theme.colorText }} 
+            onClick={() => navigate('/notifications')}
+          />
         </Badge>
         <Dropdown menu={{ items: menuItems }} placement="bottomRight">
           <Space style={{ cursor: 'pointer' }}>

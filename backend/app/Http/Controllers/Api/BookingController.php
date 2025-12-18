@@ -118,9 +118,33 @@ class BookingController extends Controller
         $bookingData = $validator->validated();
         $bookingData['user_id'] = auth()->id();
         $bookingData['duration'] = $duration;
+        // Par défaut, toutes les réservations nécessitent une approbation
+        // Les managers/admins peuvent approuver directement
         $bookingData['status'] = 'pending';
 
         $booking = Booking::create($bookingData);
+
+        // Créer une notification pour l'utilisateur
+        \App\Http\Controllers\Api\NotificationController::createNotification(
+            auth()->id(),
+            'booking_pending',
+            'Réservation en attente',
+            "Votre réservation pour \"{$resource->name}\" le " . \Carbon\Carbon::parse($request->date)->format('d/m/Y') . " à {$request->start_time} est en attente d'approbation.",
+            ['booking_id' => $booking->id]
+        );
+
+        // Notifier les managers/admins pour approbation
+        // Trouver tous les managers et admins pour les notifier
+        $managersAndAdmins = \App\Models\User::whereIn('role', ['manager', 'admin'])->get();
+        foreach ($managersAndAdmins as $admin) {
+            \App\Http\Controllers\Api\NotificationController::createNotification(
+                $admin->id,
+                'booking_pending',
+                'Nouvelle réservation en attente',
+                auth()->user()->name . " a demandé une réservation pour \"{$resource->name}\" le " . \Carbon\Carbon::parse($request->date)->format('d/m/Y') . ". Action requise.",
+                ['booking_id' => $booking->id, 'user_id' => auth()->id()]
+            );
+        }
 
         return response()->json([
             'data' => $booking->load(['resource', 'user']),
@@ -177,7 +201,25 @@ class BookingController extends Controller
             ], 400);
         }
 
+        $oldStatus = $booking->status;
         $booking->update(['status' => 'cancelled']);
+        
+        // Log custom activity
+        $booking->logCustomActivity('cancel', [
+            'old_status' => $oldStatus,
+            'new_status' => 'cancelled',
+        ]);
+
+        // Créer une notification pour l'utilisateur si ce n'est pas lui qui a annulé
+        if (auth()->id() !== $booking->user_id) {
+            \App\Http\Controllers\Api\NotificationController::createNotification(
+                $booking->user_id,
+                'booking_cancellation',
+                'Réservation annulée',
+                "Votre réservation pour \"{$booking->resource->name}\" le " . $booking->date->format('d/m/Y') . " a été annulée.",
+                ['booking_id' => $booking->id]
+            );
+        }
 
         return response()->json([
             'data' => $booking->load(['resource', 'user']),
@@ -196,7 +238,23 @@ class BookingController extends Controller
             ], 400);
         }
 
+        $oldStatus = $booking->status;
         $booking->update(['status' => 'approved']);
+        
+        // Log custom activity
+        $booking->logCustomActivity('approve', [
+            'old_status' => $oldStatus,
+            'new_status' => 'approved',
+        ]);
+
+        // Créer une notification pour l'utilisateur
+        \App\Http\Controllers\Api\NotificationController::createNotification(
+            $booking->user_id,
+            'booking_approval',
+            'Réservation approuvée',
+            "Votre demande de réservation pour \"{$booking->resource->name}\" le " . $booking->date->format('d/m/Y') . " a été approuvée.",
+            ['booking_id' => $booking->id]
+        );
 
         return response()->json([
             'data' => $booking->load(['resource', 'user']),
@@ -215,7 +273,23 @@ class BookingController extends Controller
             ], 400);
         }
 
+        $oldStatus = $booking->status;
         $booking->update(['status' => 'rejected']);
+        
+        // Log custom activity
+        $booking->logCustomActivity('reject', [
+            'old_status' => $oldStatus,
+            'new_status' => 'rejected',
+        ]);
+
+        // Créer une notification pour l'utilisateur
+        \App\Http\Controllers\Api\NotificationController::createNotification(
+            $booking->user_id,
+            'booking_cancellation',
+            'Réservation rejetée',
+            "Votre demande de réservation pour \"{$booking->resource->name}\" le " . $booking->date->format('d/m/Y') . " a été rejetée.",
+            ['booking_id' => $booking->id]
+        );
 
         return response()->json([
             'data' => $booking->load(['resource', 'user']),

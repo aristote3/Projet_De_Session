@@ -28,7 +28,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'encrypt' => false,
+    'encrypt' => false, // Sessions are stored in Redis/files, encryption handled by middleware
 
     /*
     |--------------------------------------------------------------------------
@@ -101,25 +101,30 @@ return [
     |--------------------------------------------------------------------------
     | HTTPS Only Cookies
     |--------------------------------------------------------------------------
+    | Set to true in production with HTTPS, false for local development
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', false), // false for localhost, true for HTTPS in production
 
     /*
     |--------------------------------------------------------------------------
     | HTTP Access Only
     |--------------------------------------------------------------------------
+    | Prevents JavaScript access to cookies (XSS protection)
     */
 
-    'http_only' => true,
+    'http_only' => true, // Enabled for security - prevents XSS attacks
 
     /*
     |--------------------------------------------------------------------------
     | Same-Site Cookies
     |--------------------------------------------------------------------------
+    | 'lax' allows cookies to be sent with top-level navigations
+    | 'strict' is more secure but may break some functionality
+    | null disables SameSite (not recommended)
     */
 
-    'same_site' => 'lax',
+    'same_site' => 'lax', // 'lax' is a good balance between security and functionality
 
 ];
 

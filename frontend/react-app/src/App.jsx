@@ -107,9 +107,10 @@ function App() {
                       {user?.role === 'user' && (
                         <>
                           <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-                          <Route path="/notifications" element={<ProtectedRoute><UserNotifications /></ProtectedRoute>} />
                         </>
                       )}
+                      {/* Notifications - accessible à tous les rôles authentifiés */}
+                      <Route path="/notifications" element={<ProtectedRoute><UserNotifications /></ProtectedRoute>} />
                       {/* Messages - accessible à tous les rôles authentifiés */}
                       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
                       <Route path="/floor-plan" element={<ProtectedRoute><FloorPlan /></ProtectedRoute>} />

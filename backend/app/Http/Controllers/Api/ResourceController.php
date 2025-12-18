@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Resource;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -55,6 +56,14 @@ class ResourceController extends Controller
      */
     public function store(Request $request)
     {
+        // Vérifier que l'utilisateur est manager ou admin
+        $user = $request->user();
+        if (!$user || (!$user->isManager() && !$user->isAdmin())) {
+            return response()->json([
+                'message' => 'Unauthorized. Seuls les managers et administrateurs peuvent créer des ressources.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'category' => 'required|in:salle,equipement,vehicule,service',
@@ -99,6 +108,14 @@ class ResourceController extends Controller
      */
     public function update(Request $request, Resource $resource)
     {
+        // Vérifier que l'utilisateur est manager ou admin
+        $user = $request->user();
+        if (!$user || (!$user->isManager() && !$user->isAdmin())) {
+            return response()->json([
+                'message' => 'Unauthorized. Seuls les managers et administrateurs peuvent modifier des ressources.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'category' => 'sometimes|required|in:salle,equipement,vehicule,service',
@@ -133,6 +150,14 @@ class ResourceController extends Controller
      */
     public function destroy(Resource $resource)
     {
+        // Vérifier que l'utilisateur est manager ou admin
+        $user = request()->user();
+        if (!$user || (!$user->isManager() && !$user->isAdmin())) {
+            return response()->json([
+                'message' => 'Unauthorized. Seuls les managers et administrateurs peuvent supprimer des ressources.'
+            ], 403);
+        }
+
         $resource->delete();
 
         return response()->json([

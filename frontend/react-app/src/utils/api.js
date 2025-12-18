@@ -41,6 +41,10 @@ api.interceptors.response.use(
       // Token expiré ou invalide
       localStorage.removeItem('auth')
       window.location.href = '/login'
+    } else if (error.response?.status === 403) {
+      // Permission refusée - ne pas rediriger, juste logger
+      console.warn('Accès refusé:', error.response?.data?.message || 'Vous n\'avez pas la permission d\'effectuer cette action')
+      // L'erreur sera gérée par le composant qui a fait l'appel
     }
     return Promise.reject(error)
   }

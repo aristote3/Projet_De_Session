@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, Typography, Form, Switch, Input, Button, Space, Divider, Alert, message } from 'antd'
 import { SettingOutlined, BellOutlined, SaveOutlined } from '@ant-design/icons'
 import { useSelector } from 'react-redux'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -11,15 +12,32 @@ const ManagerSettings = () => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/settings/business')
+        const settings = response.data.data || {}
+        if (settings.notifications) {
+          form.setFieldsValue({ notifications: settings.notifications })
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des paramètres:', error)
+      }
+    }
+    fetchSettings()
+  }, [form])
+
   const handleSave = async (values) => {
     setLoading(true)
     try {
-      // TODO: Implémenter la sauvegarde des paramètres
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post('/settings/business', {
+        notifications: values.notifications,
+      })
       message.success('Paramètres sauvegardés avec succès')
-      console.log('Settings saved:', values)
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }

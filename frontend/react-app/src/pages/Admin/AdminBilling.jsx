@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Typography, Table, Tag, Button, Space, Modal, Form, Input, Select, InputNumber, DatePicker, message, Row, Col, Statistic, Divider, Tabs } from 'antd'
+import { Card, Typography, Table, Tag, Button, Space, Modal, Form, Input, Select, InputNumber, DatePicker, message, Row, Col, Statistic, Divider, Tabs, Popconfirm } from 'antd'
 import { DollarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import api from '../../utils/api'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -10,6 +11,7 @@ const AdminBilling = () => {
   const [plans, setPlans] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
   const [invoices, setInvoices] = useState([])
+  const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(false)
   const [isPlanModalVisible, setIsPlanModalVisible] = useState(false)
   const [isInvoiceModalVisible, setIsInvoiceModalVisible] = useState(false)
@@ -17,90 +19,39 @@ const AdminBilling = () => {
   const [planForm] = Form.useForm()
   const [invoiceForm] = Form.useForm()
 
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      // Fetch plans
+      const plansResponse = await api.get('/billing/plans')
+      const plansData = (plansResponse.data.data || []).map(plan => ({
+        ...plan,
+        billingCycle: plan.billing_cycle || plan.billingCycle,
+        features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : []),
+      }))
+      setPlans(plansData)
+
+      // Fetch subscriptions
+      const subscriptionsResponse = await api.get('/billing/subscriptions')
+      setSubscriptions(subscriptionsResponse.data.data || [])
+
+      // Fetch invoices
+      const invoicesResponse = await api.get('/billing/invoices')
+      setInvoices(invoicesResponse.data.data || [])
+
+      // Fetch clients for invoice form
+      const clientsResponse = await api.get('/admin/dashboard')
+      setClients(clientsResponse.data.data.clients || [])
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error)
+      message.error('Erreur lors du chargement des données')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    // TODO: Fetch from API
-    setPlans([
-      {
-        id: 1,
-        name: 'Basic',
-        price: 99,
-        billingCycle: 'monthly',
-        features: ['50 utilisateurs', '20 ressources', '500 réservations/mois'],
-        status: 'active',
-      },
-      {
-        id: 2,
-        name: 'Premium',
-        price: 299,
-        billingCycle: 'monthly',
-        features: ['100 utilisateurs', '50 ressources', '1000 réservations/mois'],
-        status: 'active',
-      },
-      {
-        id: 3,
-        name: 'Enterprise',
-        price: 999,
-        billingCycle: 'monthly',
-        features: ['Illimité', 'Illimité', 'Illimité'],
-        status: 'active',
-      },
-    ])
-
-    setSubscriptions([
-      {
-        id: 1,
-        clientId: 1,
-        clientName: 'Acme Corporation',
-        planId: 2,
-        planName: 'Premium',
-        price: 299,
-        billingCycle: 'monthly',
-        status: 'active',
-        startDate: '2024-01-15',
-        nextBilling: '2024-12-15',
-        paymentMethod: 'card',
-        autoRenew: true,
-      },
-      {
-        id: 2,
-        clientId: 2,
-        clientName: 'TechStart Inc',
-        planId: 1,
-        planName: 'Basic',
-        price: 99,
-        billingCycle: 'monthly',
-        status: 'active',
-        startDate: '2024-02-20',
-        nextBilling: '2024-12-20',
-        paymentMethod: 'card',
-        autoRenew: true,
-      },
-    ])
-
-    setInvoices([
-      {
-        id: 1,
-        clientId: 1,
-        clientName: 'Acme Corporation',
-        subscriptionId: 1,
-        amount: 299,
-        status: 'paid',
-        issueDate: '2024-11-15',
-        dueDate: '2024-11-15',
-        paidDate: '2024-11-15',
-      },
-      {
-        id: 2,
-        clientId: 2,
-        clientName: 'TechStart Inc',
-        subscriptionId: 2,
-        amount: 99,
-        status: 'pending',
-        issueDate: '2024-12-01',
-        dueDate: '2024-12-20',
-        paidDate: null,
-      },
-    ])
+    fetchData()
   }, [])
 
   const handleAddPlan = () => {
@@ -111,21 +62,47 @@ const AdminBilling = () => {
 
   const handleEditPlan = (plan) => {
     setEditingPlan(plan)
-    planForm.setFieldsValue(plan)
+    planForm.setFieldsValue({
+      name: plan.name,
+      price: plan.price,
+      billingCycle: plan.billing_cycle || plan.billingCycle,
+      features: Array.isArray(plan.features) ? plan.features.join('\n') : '',
+      status: plan.status,
+    })
     setIsPlanModalVisible(true)
   }
 
   const handleSavePlan = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      message.success(editingPlan ? 'Plan modifié' : 'Plan créé')
+      if (editingPlan) {
+        await api.put(`/billing/plans/${editingPlan.id}`, {
+          name: values.name,
+          price: values.price,
+          billing_cycle: values.billingCycle,
+          features: values.features ? values.features.split('\n').filter(f => f.trim()) : [],
+          status: values.status || 'active',
+        })
+        message.success('Plan modifié')
+      } else {
+        await api.post('/billing/plans', {
+          name: values.name,
+          price: values.price,
+          billing_cycle: values.billingCycle,
+          features: values.features ? values.features.split('\n').filter(f => f.trim()) : [],
+          status: values.status || 'active',
+        })
+        message.success('Plan créé')
+      }
+      
       setIsPlanModalVisible(false)
       setEditingPlan(null)
       planForm.resetFields()
+      await fetchData()
     } catch (error) {
-      message.error('Erreur lors de la sauvegarde')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la sauvegarde'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -134,13 +111,23 @@ const AdminBilling = () => {
   const handleCreateInvoice = async (values) => {
     setLoading(true)
     try {
-      // TODO: API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await api.post('/billing/invoices', {
+        user_id: values.clientId,
+        subscription_id: values.subscriptionId || null,
+        amount: values.amount,
+        issue_date: values.issueDate.format('YYYY-MM-DD'),
+        due_date: values.dueDate.format('YYYY-MM-DD'),
+        items: values.items || [],
+        notes: values.notes || null,
+      })
       message.success('Facture créée')
       setIsInvoiceModalVisible(false)
       invoiceForm.resetFields()
+      await fetchData()
     } catch (error) {
-      message.error('Erreur lors de la création')
+      console.error('Erreur:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la création'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -150,9 +137,15 @@ const AdminBilling = () => {
     Modal.confirm({
       title: 'Rembourser',
       content: 'Êtes-vous sûr de vouloir rembourser cette facture ?',
-      onOk: () => {
-        message.success('Remboursement effectué')
-        // TODO: API call
+      onOk: async () => {
+        try {
+          await api.post(`/billing/invoices/${invoiceId}/refund`)
+          message.success('Remboursement effectué')
+          await fetchData()
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors du remboursement')
+        }
       },
     })
   }
@@ -161,9 +154,19 @@ const AdminBilling = () => {
     Modal.confirm({
       title: 'Appliquer une réduction',
       content: 'Entrez le montant ou le pourcentage de réduction',
-      onOk: () => {
-        message.success('Réduction appliquée')
-        // TODO: API call
+      onOk: async () => {
+        try {
+          // TODO: Créer un modal pour saisir le type et la valeur de la réduction
+          await api.post(`/billing/subscriptions/${subscriptionId}/discount`, {
+            discount_type: 'percentage',
+            discount_value: 10,
+          })
+          message.success('Réduction appliquée')
+          await fetchData()
+        } catch (error) {
+          console.error('Erreur:', error)
+          message.error('Erreur lors de l\'application de la réduction')
+        }
       },
     })
   }
@@ -189,13 +192,16 @@ const AdminBilling = () => {
     {
       title: 'Fonctionnalités',
       key: 'features',
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          {record.features.map((f, i) => (
-            <Text key={i} style={{ fontSize: 12 }}>• {f}</Text>
-          ))}
-        </Space>
-      ),
+      render: (_, record) => {
+        const features = Array.isArray(record.features) ? record.features : []
+        return (
+          <Space direction="vertical" size={0}>
+            {features.length > 0 ? features.map((f, i) => (
+              <Text key={i} style={{ fontSize: 12 }}>• {f}</Text>
+            )) : <Text type="secondary" style={{ fontSize: 12 }}>Aucune</Text>}
+          </Space>
+        )
+      },
     },
     {
       title: 'Statut',
@@ -215,7 +221,24 @@ const AdminBilling = () => {
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEditPlan(record)}>
             Modifier
           </Button>
-          <Button size="small" danger icon={<DeleteOutlined />}>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={async () => {
+            Modal.confirm({
+              title: 'Supprimer le plan',
+              content: 'Êtes-vous sûr de vouloir supprimer ce plan ?',
+              okText: 'Supprimer',
+              okType: 'danger',
+              onOk: async () => {
+                try {
+                  await api.delete(`/billing/plans/${record.id}`)
+                  message.success('Plan supprimé')
+                  await fetchData()
+                } catch (error) {
+                  console.error('Erreur:', error)
+                  message.error('Erreur lors de la suppression')
+                }
+              },
+            })
+          }}>
             Supprimer
           </Button>
         </Space>
@@ -546,7 +569,11 @@ const AdminBilling = () => {
             rules={[{ required: true }]}
           >
             <Select placeholder="Sélectionner un client">
-              {/* TODO: Load from API */}
+              {clients.map(client => (
+                <Select.Option key={client.id} value={client.id}>
+                  {client.name || client.manager + ' Organization'}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
 
