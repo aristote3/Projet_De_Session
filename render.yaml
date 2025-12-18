@@ -81,14 +81,10 @@ services:
     plan: starter
     envVars:
       - key: VITE_API_URL
-        fromService:
-          name: youmanage-backend
-          type: web
-          property: host
         value: https://youmanage-backend.onrender.com/api
 
   # PostgreSQL Database
-  - type: pspg
+  - type: pg
     name: youmanage-db
     plan: starter
     databaseName: youmanage
@@ -99,7 +95,3 @@ services:
     name: youmanage-redis
     plan: starter
     maxmemoryPolicy: allkeys-lru
-
-
-
-
