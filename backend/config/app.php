@@ -99,7 +99,10 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        App\Providers\TelescopeServiceProvider::class,
+        // Conditionally register Telescope only if it's installed
+        ...(class_exists(\Laravel\Telescope\TelescopeApplicationServiceProvider::class) 
+            ? [App\Providers\TelescopeServiceProvider::class] 
+            : []),
     ])->toArray(),
 
     /*
