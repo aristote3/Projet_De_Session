@@ -54,4 +54,4 @@ EXPOSE ${PORT:-8000}
 # Simple startup command
 # Hybrid APP_KEY: Generate only if not set in Render environment variables
 # Automatically run migrations and start the server
-CMD sh -c "touch /var/www/html/.env 2>/dev/null || true && if [ -z \"\$APP_KEY\" ]; then php artisan key:generate --force; fi && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=\${PORT:-8000}"
+CMD sh -c "if [ ! -f /var/www/html/.env ]; then echo 'APP_KEY=' > /var/www/html/.env; fi && if [ -z \"\$APP_KEY\" ]; then php artisan key:generate --force; fi && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=\${PORT:-8000}"
