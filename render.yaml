@@ -83,15 +83,15 @@ services:
       - key: VITE_API_URL
         value: https://youmanage-backend.onrender.com/api
 
-  # PostgreSQL Database
-  - type: postgres
-    name: youmanage-db
-    plan: starter
-    databaseName: youmanage
-    user: youmanage
-
   # Redis Cache
   - type: redis
     name: youmanage-redis
     plan: starter
     maxmemoryPolicy: allkeys-lru
+
+# PostgreSQL Database
+databases:
+  - name: youmanage-db
+    plan: starter
+    databaseName: youmanage
+    user: youmanage
