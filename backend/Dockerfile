@@ -20,8 +20,6 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     postgresql-client \
     && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -80,14 +78,11 @@ DB_DATABASE=\${DB_DATABASE:-youmanage}\n\
 DB_USERNAME=\${DB_USERNAME:-youmanage}\n\
 DB_PASSWORD=\${DB_PASSWORD:-}\n\
 BROADCAST_DRIVER=log\n\
-CACHE_DRIVER=${CACHE_DRIVER:-redis}\n\
+CACHE_DRIVER=${CACHE_DRIVER:-file}\n\
 FILESYSTEM_DISK=local\n\
 QUEUE_CONNECTION=sync\n\
-SESSION_DRIVER=${SESSION_DRIVER:-redis}\n\
+SESSION_DRIVER=${SESSION_DRIVER:-file}\n\
 SESSION_LIFETIME=120\n\
-REDIS_HOST=\${REDIS_HOST:-localhost}\n\
-REDIS_PASSWORD=\${REDIS_PASSWORD:-null}\n\
-REDIS_PORT=\${REDIS_PORT:-6379}\n\
 MAIL_MAILER=smtp\n\
 MAIL_HOST=${MAIL_HOST:-smtp.mailtrap.io}\n\
 MAIL_PORT=${MAIL_PORT:-2525}\n\
