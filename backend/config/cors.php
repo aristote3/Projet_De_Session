@@ -26,9 +26,12 @@ return [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         env('FRONTEND_URL'), // Production domain from environment
+        'https://youmanage-frontend.onrender.com', // Explicit Render frontend URL
     ]),
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://.*\.onrender\.com$#', // Allow all Render subdomains
+    ],
 
     'allowed_headers' => ['*'],
 
