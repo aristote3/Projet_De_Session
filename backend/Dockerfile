@@ -30,11 +30,13 @@ RUN mkdir -p /var/www/html/storage/framework/{sessions,views,cache} \
     && mkdir -p /var/www/html/storage/logs \
     && mkdir -p /var/www/html/bootstrap/cache
 
-# Copy composer files first for caching
-COPY composer.json composer.lock ./
+# Copy composer.json first for caching
+COPY composer.json ./
 
 # Install dependencies (skip scripts to avoid errors during build)
-RUN composer install --no-dev --no-scripts --optimize-autoloader
+# Use --ignore-platform-reqs to avoid platform requirement issues
+RUN composer install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs || \
+    composer update --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs
 
 # Copy application code
 COPY . .
