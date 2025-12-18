@@ -41,9 +41,6 @@ RUN composer install --no-dev --no-scripts --optimize-autoloader --ignore-platfo
 # Copy application code
 COPY . .
 
-# Run composer scripts after copying code
-RUN composer dump-autoload --optimize
-
 # Set permissions
 RUN chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
