@@ -84,7 +84,7 @@ services:
         value: https://youmanage-backend.onrender.com/api
 
   # PostgreSQL Database
-  - type: pg
+  - type: postgres
     name: youmanage-db
     plan: starter
     databaseName: youmanage
