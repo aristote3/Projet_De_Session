@@ -23,3 +23,6 @@ class Faq extends Model
     ];
 }
 
+
+
+
