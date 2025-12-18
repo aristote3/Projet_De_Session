@@ -52,5 +52,6 @@ RUN chmod -R 775 /var/www/html/storage \
 EXPOSE ${PORT:-8000}
 
 # Simple startup command
-# Note: Migrations and key generation should be done manually via Render shell after first deploy
-CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+# Automatically run migrations and start the server
+# Note: APP_KEY should be set in Render environment variables
+CMD sh -c "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"
