@@ -34,12 +34,15 @@ RUN mkdir -p /var/www/html/storage/framework/{sessions,views,cache} \
 COPY composer.json ./
 
 # Install dependencies (skip scripts to avoid errors during build)
-# Use --ignore-platform-reqs to avoid platform requirement issues
-RUN composer install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs || \
-    composer update --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs
+# Use --ignore-platform-reqs to avoid platform requirement issues (PHP version)
+RUN composer install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs --no-interaction || \
+    composer update --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs --no-interaction
 
 # Copy application code
 COPY . .
+
+# Disable platform check to avoid PHP version issues
+ENV COMPOSER_DISABLE_PLATFORM_CHECK=1
 
 # Set permissions
 RUN chmod -R 775 /var/www/html/storage \
