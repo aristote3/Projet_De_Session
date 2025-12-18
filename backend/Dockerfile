@@ -53,6 +53,6 @@ EXPOSE ${PORT:-8000}
 
 # Simple startup command
 # Hybrid APP_KEY: Generate only if not set in Render environment variables
-# Set DB_CONNECTION=pgsql in .env to override Laravel default (mysql)
+# Write DB configuration to .env from Render environment variables (only if not exists)
 # Automatically run migrations and start the server
-CMD sh -c "if [ ! -f /var/www/html/.env ]; then echo 'APP_KEY=' > /var/www/html/.env && echo 'DB_CONNECTION=pgsql' >> /var/www/html/.env; fi && if ! grep -q 'DB_CONNECTION=' /var/www/html/.env; then echo 'DB_CONNECTION=pgsql' >> /var/www/html/.env; fi && if [ -z \"\$APP_KEY\" ]; then php artisan key:generate --force; fi && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=\${PORT:-8000}"
+CMD sh -c "if [ ! -f /var/www/html/.env ]; then echo 'APP_KEY=' > /var/www/html/.env; fi && if ! grep -q '^DB_CONNECTION=' /var/www/html/.env; then echo 'DB_CONNECTION=\${DB_CONNECTION:-pgsql}' >> /var/www/html/.env; fi && if ! grep -q '^DB_HOST=' /var/www/html/.env; then echo 'DB_HOST=\${DB_HOST}' >> /var/www/html/.env; fi && if ! grep -q '^DB_PORT=' /var/www/html/.env; then echo 'DB_PORT=\${DB_PORT:-5432}' >> /var/www/html/.env; fi && if ! grep -q '^DB_DATABASE=' /var/www/html/.env; then echo 'DB_DATABASE=\${DB_DATABASE}' >> /var/www/html/.env; fi && if ! grep -q '^DB_USERNAME=' /var/www/html/.env; then echo 'DB_USERNAME=\${DB_USERNAME}' >> /var/www/html/.env; fi && if ! grep -q '^DB_PASSWORD=' /var/www/html/.env; then echo 'DB_PASSWORD=\${DB_PASSWORD}' >> /var/www/html/.env; fi && if [ -z \"\$APP_KEY\" ]; then php artisan key:generate --force; fi && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=\${PORT:-8000}"
