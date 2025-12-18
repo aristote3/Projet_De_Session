@@ -72,64 +72,81 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $requestedRole = $request->role ?? 'user';
-        
-        // Règles de validation de base
-        $rules = [
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
-            'role' => 'nullable|in:admin,manager,user',
-        ];
+        try {
+            $requestedRole = $request->role ?? 'user';
+            
+            // Règles de validation de base
+            $rules = [
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'password' => 'required|string|min:6|confirmed',
+                'role' => 'nullable|in:admin,manager,user',
+            ];
 
-        // Règles supplémentaires pour les managers
-        if ($requestedRole === 'manager') {
-            $rules['company_name'] = 'required|string|max:255';
-            $rules['phone'] = 'nullable|string|max:20';
-            $rules['industry'] = 'nullable|string|max:100';
-            $rules['company_size'] = 'nullable|string|max:50';
-            $rules['description'] = 'nullable|string|max:1000';
-        }
+            // Règles supplémentaires pour les managers
+            if ($requestedRole === 'manager') {
+                $rules['company_name'] = 'required|string|max:255';
+                $rules['phone'] = 'nullable|string|max:20';
+                $rules['industry'] = 'nullable|string|max:100';
+                $rules['company_size'] = 'nullable|string|max:50';
+                $rules['description'] = 'nullable|string|max:1000';
+            }
 
-        $validator = Validator::make($request->all(), $rules);
+            $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-        
-        // Les managers doivent être approuvés par un admin
-        // Les admins ne peuvent pas s'auto-créer via l'inscription publique
-        if ($requestedRole === 'admin') {
-            $requestedRole = 'user'; // Forcer le rôle user pour sécurité
-        }
-        
-        $status = ($requestedRole === 'manager') ? 'pending' : 'active';
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
+            // Les managers doivent être approuvés par un admin
+            // Les admins ne peuvent pas s'auto-créer via l'inscription publique
+            if ($requestedRole === 'admin') {
+                $requestedRole = 'user'; // Forcer le rôle user pour sécurité
+            }
+            
+            $status = ($requestedRole === 'manager') ? 'pending' : 'active';
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $requestedRole,
-            'status' => $status,
-        ]);
-
-        // Si c'est un manager, créer aussi l'organisation
-        if ($requestedRole === 'manager') {
-            Organization::create([
-                'user_id' => $user->id,
-                'company_name' => $request->company_name,
-                'phone' => $request->phone,
-                'industry' => $request->industry,
-                'company_size' => $request->company_size,
-                'description' => $request->description,
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => $requestedRole,
+                'status' => $status,
             ]);
-        }
 
-        // Pour les managers en attente, ne pas créer de token (ils ne peuvent pas se connecter)
-        if ($status === 'pending') {
+            // Si c'est un manager, créer aussi l'organisation
+            if ($requestedRole === 'manager') {
+                Organization::create([
+                    'user_id' => $user->id,
+                    'company_name' => $request->company_name,
+                    'phone' => $request->phone,
+                    'industry' => $request->industry,
+                    'company_size' => $request->company_size,
+                    'description' => $request->description,
+                ]);
+            }
+
+            // Pour les managers en attente, ne pas créer de token (ils ne peuvent pas se connecter)
+            if ($status === 'pending') {
+                return response()->json([
+                    'data' => [
+                        'user' => [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'role' => $user->role,
+                            'status' => $user->status,
+                        ],
+                    ],
+                    'message' => 'Demande de compte Manager soumise. Un administrateur validera votre compte.'
+                ], 201);
+            }
+
+            $token = $user->createToken('auth-token')->plainTextToken;
+
             return response()->json([
                 'data' => [
                     'user' => [
@@ -137,27 +154,22 @@ class AuthController extends Controller
                         'name' => $user->name,
                         'email' => $user->email,
                         'role' => $user->role,
-                        'status' => $user->status,
                     ],
+                    'token' => $token,
                 ],
-                'message' => 'Demande de compte Manager soumise. Un administrateur validera votre compte.'
+                'message' => 'Inscription réussie'
             ], 201);
+        } catch (\Exception $e) {
+            \Log::error('Registration error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            
+            return response()->json([
+                'message' => 'Erreur lors de l\'inscription',
+                'error' => config('app.debug') ? $e->getMessage() : 'Une erreur est survenue. Veuillez réessayer.'
+            ], 500);
         }
-
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return response()->json([
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                ],
-                'token' => $token,
-            ],
-            'message' => 'Inscription réussie'
-        ], 201);
     }
 
     /**
