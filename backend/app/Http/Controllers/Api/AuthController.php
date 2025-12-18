@@ -73,6 +73,8 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         try {
+            \Log::info('Registration attempt started', ['email' => $request->email]);
+            
             $requestedRole = $request->role ?? 'user';
             
             // Règles de validation de base
@@ -95,6 +97,7 @@ class AuthController extends Controller
             $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
+                \Log::warning('Registration validation failed', ['errors' => $validator->errors()]);
                 return response()->json([
                     'message' => 'Validation error',
                     'errors' => $validator->errors()
@@ -109,6 +112,8 @@ class AuthController extends Controller
             
             $status = ($requestedRole === 'manager') ? 'pending' : 'active';
 
+            \Log::info('Creating user', ['email' => $request->email, 'role' => $requestedRole]);
+            
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -117,8 +122,11 @@ class AuthController extends Controller
                 'status' => $status,
             ]);
 
+            \Log::info('User created successfully', ['user_id' => $user->id]);
+
             // Si c'est un manager, créer aussi l'organisation
             if ($requestedRole === 'manager') {
+                \Log::info('Creating organization for manager', ['user_id' => $user->id]);
                 Organization::create([
                     'user_id' => $user->id,
                     'company_name' => $request->company_name,
@@ -127,6 +135,7 @@ class AuthController extends Controller
                     'company_size' => $request->company_size,
                     'description' => $request->description,
                 ]);
+                \Log::info('Organization created successfully');
             }
 
             // Pour les managers en attente, ne pas créer de token (ils ne peuvent pas se connecter)
@@ -161,13 +170,19 @@ class AuthController extends Controller
             ], 201);
         } catch (\Exception $e) {
             \Log::error('Registration error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
+                'request' => $request->except(['password', 'password_confirmation'])
             ]);
+            
+            // Log to stderr for Render logs visibility
+            error_log('REGISTRATION ERROR: ' . $e->getMessage());
+            error_log('File: ' . $e->getFile() . ':' . $e->getLine());
             
             return response()->json([
                 'message' => 'Erreur lors de l\'inscription',
-                'error' => config('app.debug') ? $e->getMessage() : 'Une erreur est survenue. Veuillez réessayer.'
+                'error' => config('app.debug') ? $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() : 'Une erreur est survenue. Veuillez réessayer.'
             ], 500);
         }
     }
