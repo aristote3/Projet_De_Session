@@ -45,11 +45,6 @@ services:
           name: youmanage-redis
           type: redis
           property: port
-      - key: REDIS_PASSWORD
-        fromService:
-          name: youmanage-redis
-          type: redis
-          property: password
       - key: APP_URL
         generateValue: true
       - key: FRONTEND_URL
@@ -88,6 +83,7 @@ services:
     name: youmanage-redis
     plan: starter
     maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
 
 # PostgreSQL Database
 databases:
