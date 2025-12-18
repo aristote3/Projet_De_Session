@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
+use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
 
 class TestUsersSeeder extends Seeder
@@ -38,7 +39,7 @@ class TestUsersSeeder extends Seeder
             ],
         ];
 
-        // Managers (Gérants)
+        // Managers (Gérants) avec leurs organisations
         $managers = [
             [
                 'name' => 'Jean Dupont',
@@ -46,6 +47,13 @@ class TestUsersSeeder extends Seeder
                 'password' => Hash::make('manager123'),
                 'role' => 'manager',
                 'status' => 'active',
+                'organization' => [
+                    'company_name' => 'ACME Corporation',
+                    'phone' => '+1-555-0101',
+                    'industry' => 'Technology',
+                    'company_size' => 'Medium',
+                    'description' => 'Leading technology solutions provider',
+                ],
             ],
             [
                 'name' => 'Marie Martin',
@@ -53,6 +61,13 @@ class TestUsersSeeder extends Seeder
                 'password' => Hash::make('manager123'),
                 'role' => 'manager',
                 'status' => 'active',
+                'organization' => [
+                    'company_name' => 'TechStart Solutions',
+                    'phone' => '+1-555-0102',
+                    'industry' => 'Consulting',
+                    'company_size' => 'Small',
+                    'description' => 'Innovative consulting services',
+                ],
             ],
             [
                 'name' => 'Pierre Dubois',
@@ -60,6 +75,13 @@ class TestUsersSeeder extends Seeder
                 'password' => Hash::make('manager123'),
                 'role' => 'manager',
                 'status' => 'active',
+                'organization' => [
+                    'company_name' => 'Global Services Inc.',
+                    'phone' => '+1-555-0103',
+                    'industry' => 'Services',
+                    'company_size' => 'Large',
+                    'description' => 'Global business services provider',
+                ],
             ],
             [
                 'name' => 'Sophie Bernard',
@@ -67,6 +89,13 @@ class TestUsersSeeder extends Seeder
                 'password' => Hash::make('manager123'),
                 'role' => 'manager',
                 'status' => 'active',
+                'organization' => [
+                    'company_name' => 'StartupHub Ventures',
+                    'phone' => '+1-555-0104',
+                    'industry' => 'Startup',
+                    'company_size' => 'Startup',
+                    'description' => 'Venture capital and startup accelerator',
+                ],
             ],
         ];
 
@@ -139,13 +168,28 @@ class TestUsersSeeder extends Seeder
             $this->command->info("Admin créé : {$admin['email']}");
         }
 
-        // Créer les managers
-        foreach ($managers as $manager) {
-            User::updateOrCreate(
-                ['email' => $manager['email']],
-                $manager
+        // Créer les managers avec leurs organisations
+        foreach ($managers as $managerData) {
+            // Extraire les données de l'organisation
+            $organizationData = $managerData['organization'] ?? null;
+            unset($managerData['organization']);
+            
+            // Créer ou mettre à jour le manager
+            $manager = User::updateOrCreate(
+                ['email' => $managerData['email']],
+                $managerData
             );
-            $this->command->info("Manager créé : {$manager['email']}");
+            
+            // Créer ou mettre à jour l'organisation pour ce manager
+            if ($organizationData) {
+                Organization::updateOrCreate(
+                    ['user_id' => $manager->id],
+                    array_merge($organizationData, ['user_id' => $manager->id])
+                );
+                $this->command->info("Manager créé avec organisation : {$managerData['email']} - {$organizationData['company_name']}");
+            } else {
+                $this->command->info("Manager créé : {$managerData['email']}");
+            }
         }
 
         // Créer les utilisateurs
