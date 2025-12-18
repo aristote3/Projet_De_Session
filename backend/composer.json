@@ -12,8 +12,7 @@
         "laravel/tinker": "^2.8",
         "google/apiclient": "^2.15",
         "microsoft/microsoft-graph": "^2.0",
-        "twilio/sdk": "^7.0",
-        "predis/predis": "^2.0"
+        "twilio/sdk": "^7.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
