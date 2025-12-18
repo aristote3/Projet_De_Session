@@ -5,7 +5,7 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter
+    plan: free
     envVars:
       - key: APP_ENV
         value: production
@@ -35,16 +35,6 @@ services:
         fromDatabase:
           name: youmanage-db
           property: password
-      - key: REDIS_HOST
-        fromService:
-          name: youmanage-redis
-          type: redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          name: youmanage-redis
-          type: redis
-          property: port
       - key: APP_URL
         generateValue: true
       - key: FRONTEND_URL
@@ -63,9 +53,9 @@ services:
           type: web
           property: host
       - key: CACHE_DRIVER
-        value: redis
+        value: file
       - key: SESSION_DRIVER
-        value: redis
+        value: file
 
   # Frontend Service (React)
   - type: web
@@ -73,21 +63,14 @@ services:
     runtime: docker
     dockerfilePath: ./frontend/react-app/Dockerfile
     dockerContext: ./frontend/react-app
-    plan: starter
+    plan: free
     envVars:
       - key: VITE_API_URL
         value: https://youmanage-backend.onrender.com/api
 
-  # Redis Cache
-  - type: redis
-    name: youmanage-redis
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
-
 # PostgreSQL Database
 databases:
   - name: youmanage-db
-    plan: starter
+    plan: free
     databaseName: youmanage
     user: youmanage
